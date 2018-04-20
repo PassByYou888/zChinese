@@ -189,29 +189,6 @@ begin
   disposeObject([Unidentified, Completed]);
 end;
 
-procedure test;
-var
-  vl: THashVariantList;
-begin
-  vl := THashVariantList.Create(1024);
-  BigKeyAnalysis(vl);
-  DoStatus(vl.AsText);
-  vl.Clear;
-  BigKeyValue('这个培养基包含了一种或更多种未识别的因素，刺激内皮细胞增生', True, vl);
-  DoStatus(vl.AsText);
-  DoStatus(BigKeyWord('这个培养基包含了一种或更多种未识别的因素，刺激内皮细胞增生', True));
-  vl.Clear;
-  disposeObject(vl);
-
-  DoStatus(BigWord('这个培养基包含了一种或更多种未识别的因素，刺激内皮细胞增生', True));
-
-  DoStatus(wordPart('这个培养基包含了一种或更多种未识别的因素，刺激内皮细胞增生'));
-  DoStatus(wordPartN('这个培养基包含了一种或更多种未识别的因素，刺激内皮细胞增生'));
-  DoStatus(wordPartD('这个培养基包含了一种或更多种未识别的因素，刺激内皮细胞增生'));
-end;
-
 initialization
-
-test;
 
 end.

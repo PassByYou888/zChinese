@@ -282,8 +282,6 @@ begin
 
   // big word
   BigWordDict := THashList.Create(200 * 10000);
-
-  LoadAndMergeDict(umlCurrentPath);
 end;
 
 procedure FreeGBKMedia;
