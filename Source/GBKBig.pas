@@ -1,3 +1,12 @@
+{ ****************************************************************************** }
+{ * GBK with Big text data support,  written by QQ 600585@qq.com               * }
+{ * https://github.com/PassByYou888/CoreCipher                                 * }
+{ * https://github.com/PassByYou888/ZServer4D                                  * }
+{ * https://github.com/PassByYou888/zExpression                                * }
+{ * https://github.com/PassByYou888/zTranslate                                 * }
+{ * https://github.com/PassByYou888/zSound                                     * }
+{ * https://github.com/PassByYou888/zAnalysis                                  * }
+{ ****************************************************************************** }
 unit GBKBig;
 
 interface
@@ -37,7 +46,11 @@ var
 begin
   tmp := TBigKeyAnalysis.Create;
   tmp.output := Analysis;
+  {$IFDEF FPC}
+  bigKeyDict.Progress(@tmp.doProgress);
+  {$ELSE FPC}
   bigKeyDict.Progress(tmp.doProgress);
+  {$ENDIF FPC}
   disposeObject(tmp);
 end;
 

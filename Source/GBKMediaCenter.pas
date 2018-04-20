@@ -1,4 +1,13 @@
-﻿unit GBKMediaCenter;
+﻿{ ****************************************************************************** }
+{ * GBK media Data support, writen by QQ 600585@qq.com                         * }
+{ * https://github.com/PassByYou888/CoreCipher                                 * }
+{ * https://github.com/PassByYou888/ZServer4D                                  * }
+{ * https://github.com/PassByYou888/zExpression                                * }
+{ * https://github.com/PassByYou888/zTranslate                                 * }
+{ * https://github.com/PassByYou888/zSound                                     * }
+{ * https://github.com/PassByYou888/zAnalysis                                  * }
+{ ****************************************************************************** }
+unit GBKMediaCenter;
 
 interface
 
@@ -10,38 +19,6 @@ uses DoStatusIO, CoreClasses, PascalStrings, UPascalStrings,
 
 {$REGION 'GBKMediaCenterDecl'}
 
-
-type
-  TDictStyle = (dsChar, dsPY, dsS2T, dsT2HK, dsT2S, dsT2TW,
-    dsWordPart,
-    dsWillVec, dsWordVec,
-    dsBadEmotion, dsBadRep, dsGoodEmotion, dsGoodRep,
-    dsBigKey, dsBigWord
-    );
-  TDictStyles = set of TDictStyle;
-
-const
-  cAllDict = [dsChar, dsPY, dsS2T, dsT2HK, dsT2S, dsT2TW,
-    dsWillVec, dsWordVec,
-    dsBadEmotion, dsBadRep, dsGoodEmotion, dsGoodRep,
-    dsBigKey, dsBigWord];
-  cDictName: array [TDictStyle] of string = (
-    ('键值词库-字符'),
-    ('键值词库-拼音'),
-    ('键值词库-简体转繁体'),
-    ('键值词库-繁体转港繁体'),
-    ('键值词库-繁体转简体'),
-    ('键值词库-繁体转台湾体'),
-    ('分块文本词库-词性'),
-    ('分块文本词库-意志'),
-    ('分块文本词库-度量'),
-    ('文本词库-情感负向'),
-    ('文本词库-回馈负向'),
-    ('文本词库-情感正向'),
-    ('文本词库-回馈正向'),
-    ('大规模键值词库-分词库'),
-    ('大规模文本词库-分词库')
-    );
 
 var
   // gbk base dict
@@ -68,6 +45,35 @@ var
 function LoadAndMergeDict(const root: TPascalString): NativeInt;
 
 implementation
+
+
+type
+  TDictStyle = (dsChar, dsPY, dsS2T, dsT2HK, dsT2S, dsT2TW,
+    dsWordPart,
+    dsWillVec,
+    dsWordVec,
+    dsBadEmotion, dsBadRep, dsGoodEmotion, dsGoodRep,
+    dsBigKey, dsBigWord
+    );
+
+const
+  cDictName: array [TDictStyle] of string = (
+    ('键值词库-字符'),
+    ('键值词库-拼音'),
+    ('键值词库-简体转繁体'),
+    ('键值词库-繁体转港繁体'),
+    ('键值词库-繁体转简体'),
+    ('键值词库-繁体转台湾体'),
+    ('分块文本词库-词性'),
+    ('分块文本词库-意志'),
+    ('分块文本词库-度量'),
+    ('文本词库-情感负向'),
+    ('文本词库-回馈负向'),
+    ('文本词库-情感正向'),
+    ('文本词库-回馈正向'),
+    ('大规模键值词库-分词库'),
+    ('大规模文本词库-分词库')
+    );
 
 function GBKStorePath(const root: TPascalString; const ds: TDictStyle): TPascalString;
 begin
@@ -169,6 +175,14 @@ begin
 end;
 
 function LoadAndMergeDict(const root: TPascalString): NativeInt;
+const
+  cAllDict = [dsChar, dsPY, dsS2T, dsT2HK, dsT2S, dsT2TW,
+    dsWordPart,
+    dsWillVec,
+    dsWordVec,
+    dsBadEmotion, dsBadRep, dsGoodEmotion, dsGoodRep,
+    dsBigKey, dsBigWord];
+
 var
   ds: TDictStyle;
   r : NativeInt;
@@ -253,6 +267,7 @@ procedure InitGBKMedia;
 {$I GBK_Dict.inc}
 {$I GBKVec_Dict.inc}
 {$I GBKWordPart_Dict.inc}
+{$I GBKBig_MiniDict.inc}
 begin
   // base gbk dict
   CharDict := GetGBKHashStringDict(@C_CharDictPackageBuffer[0], SizeOf(T_CharDict_PackageBuffer), 20000);
@@ -278,10 +293,10 @@ begin
   GoodRepDict := GetGBKHashDict(@C_GoodRepDictPackageBuffer[0], SizeOf(T_GoodRepDict_PackageBuffer), 20000);
 
   // big key
-  BigKeyDict := THashStringList.Create(200 * 10000);
+  BigKeyDict := GetGBKHashStringDict(@C_MiniKeyDictPackageBuffer[0], SizeOf(T_MiniKeyDict_PackageBuffer), 200 * 10000);
 
   // big word
-  BigWordDict := THashList.Create(200 * 10000);
+  BigWordDict := GetGBKHashDict(@C_MiniDictPackageBuffer[0], SizeOf(T_MiniDict_PackageBuffer), 200 * 10000);
 end;
 
 procedure FreeGBKMedia;
