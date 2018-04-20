@@ -5,7 +5,7 @@ interface
 {$I zDefine.inc}
 
 
-uses DoStatusIO, CoreClasses, PascalStrings, UPascalStrings,
+uses DoStatusIO, CoreClasses, PascalStrings, UPascalStrings, Variants,
   MemoryStream64, ListEngine, TextDataEngine, UnicodeMixedLib;
 
 function WordPart(const s: TUPascalString; const Unidentified, Completed: TListPascalString): Integer; overload;
@@ -107,7 +107,7 @@ begin
         begin
           if Result.Len > 0 then
               Result.Append(' ');
-          Result.Append(Completed[i] + '\' + THashVariantList(Completed.Objects[i]).GetDefaultValue('token', ''));
+          Result.Append(Completed[i].Text + '\' + VarToStr(THashVariantList(Completed.Objects[i]).GetDefaultValue('token', '')));
         end;
     end;
   disposeObject([Unidentified, Completed]);
@@ -128,7 +128,7 @@ begin
         begin
           if Result.Len > 0 then
               Result.Append(#13#10);
-          Result.Append(Completed[i] + '(' + THashVariantList(Completed.Objects[i]).GetDefaultValue('desc', '') + ')');
+          Result.Append(Completed[i].Text + '(' + VarToStr(THashVariantList(Completed.Objects[i]).GetDefaultValue('desc', '')) + ')');
         end;
     end;
   disposeObject([Unidentified, Completed]);
