@@ -1,6 +1,6 @@
 # zChinese是什么
 
-中文自然语言支持的开源项目，Pascal做中文向量化化处理的地基库，100%兼容FPC的AnsiChar机制，100%兼容delphi的Unicode机制
+中文自然语言支持的开源项目，基于Pascal语言做中文向量化处理的开发包，100%兼容FPC的AnsiChar/UnicodeString机制，100%兼容delphi的Unicode机制
 
 zChinese遵循Apache2.0开源协议
 
@@ -35,8 +35,12 @@ zChinese遵循Apache2.0开源协议
 - Delphi XE10 或以上版本
 
 **特别提醒**
+- 基于zChinese的所有文本数据库均为UTF8 no bom编码，zChiense也能支持非UTF8编码，比如windows默认的中文ucs2和ascii
 - 基于FPC编译器使用zChinese时因为FPC的RT库默认为ansi字符处理机制，需要使用TUPascalString来处理Unicode的中文字符串
-- 已在zChinese内部做了FPC支持
+- 已在zChinese内部做了FPC支持：fpc使用zChinese的原理是传递字符到zChinese函数时强制转换成UnicodeString字符串，待处理完成后，再转换成FPC的内核字符串处理机制
+- fpc在保存和读取基于zChinese的文本数据库时，均能支持UTF8
+- 因为delphi和fpc内核的字符串链表到百万级数量以后问题很多，zChinese内置了一套大字符串链表系统
+- delphi平台可以在手机以最小开销载入和使用
 - delphi平台请选用XE10以上版本，无需做Unicode支持
 
 # 数据下载
