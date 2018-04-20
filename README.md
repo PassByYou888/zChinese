@@ -39,8 +39,20 @@ zChinese遵循Apache2.0开源协议
 - 已在zChinese内部做了FPC支持
 - delphi平台请选用XE10以上版本，无需做Unicode支持
 
-
 # 使用演示
+```delphi
+
+// 在程序启动时，如OnShow or OnCreate里面，使用LoadAndMergeDict读取外部词库
+// 假如目录不存在，zChinese会自动创建词库目录
+// 假如你有一定数量的词库，那么，将需要使用的词库以对应格式copy到词库路径即会生效
+// LoadAndMergeDict在GBKMediaCenter.pas库中
+
+LoadAndMergeDict(词库路径);
+
+// 接下来，使用下列罗列的API即可
+```
+
+# API
 ```delphi
 // 键值词典分词，返回分词字符串，支持库：GBKBig.pas
 BigKeyWord('中文自然语言支持的开源项目，它是中文化处理的地基库', True);
