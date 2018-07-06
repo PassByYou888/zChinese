@@ -7,6 +7,8 @@
 { * https://github.com/PassByYou888/zTranslate                                 * }
 { * https://github.com/PassByYou888/zSound                                     * }
 { * https://github.com/PassByYou888/zAnalysis                                  * }
+{ * https://github.com/PassByYou888/zGameWare                                  * }
+{ * https://github.com/PassByYou888/zRasterization                             * }
 { ****************************************************************************** }
 
 type
@@ -44,7 +46,7 @@ end;
 procedure GetCriticalLock(Obj: TObject; var output: PCriticalLock);
 var
   i, pi: Integer;
-  p    : PCriticalLock;
+  p: PCriticalLock;
 begin
   CoreCritical.Acquire;
   try
@@ -52,14 +54,12 @@ begin
     pi := -1;
     p := nil;
     i := 0;
-    if CriticalList.Count > 1 then
-        empty;
     while i < CriticalList.Count do
       begin
         if PCriticalLock(CriticalList[i])^.Obj = Obj then
           begin
             output := PCriticalLock(CriticalList[i]);
-            break;
+            Break;
           end
         else
           begin
@@ -68,7 +68,7 @@ begin
                 p := PCriticalLock(CriticalList[i]);
                 pi := i;
               end;
-            inc(i);
+            Inc(i);
           end;
       end;
     if output = nil then
@@ -115,4 +115,4 @@ begin
       GetCriticalLock(Obj, p);
   p^.Obj := nil;
   p^.Critical.Release;
-end;
+end; 

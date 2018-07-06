@@ -1,0 +1,21 @@
+object FPCForm: TFPCForm
+  Left = 533
+  Height = 471
+  Top = 210
+  Width = 733
+  Caption = 'FPCForm'
+  ClientHeight = 471
+  ClientWidth = 733
+  OnCreate = FormCreate
+  LCLVersion = '1.8.0.6'
+  object Memo1: TMemo
+    Left = 24
+    Height = 354
+    Top = 24
+    Width = 630
+    Lines.Strings = (
+      'Memo1'
+    )
+    TabOrder = 0
+  end
+end

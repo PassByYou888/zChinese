@@ -6,31 +6,52 @@
 { * https://github.com/PassByYou888/zTranslate                                 * }
 { * https://github.com/PassByYou888/zSound                                     * }
 { * https://github.com/PassByYou888/zAnalysis                                  * }
+{ * https://github.com/PassByYou888/zGameWare                                  * }
+{ * https://github.com/PassByYou888/zRasterization                             * }
 { ****************************************************************************** }
 
 unit Geometry2DUnit;
 
-{$I zDefine.inc}
+{$INCLUDE zDefine.inc}
 
 interface
 
-uses CoreClasses, Sysutils, Math, Types;
+uses Classes, SysUtils, Math, Types, CoreClasses;
 
 type
-  TGeoFloat     = Single;
-  TGeoInt       = Integer;
-  T2DPoint      = packed array [0 .. 1] of TGeoFloat;
-  P2DPoint      = ^T2DPoint;
-  TVec2         = T2DPoint;
-  TPoint2       = T2DPoint;
-  TArray2DPoint = packed array of T2DPoint;
-  PArray2DPoint = ^TArray2DPoint;
-  T2DRect       = array [0 .. 1] of T2DPoint;
-  P2DRect       = ^T2DRect;
-  TRect2        = T2DRect;
-  TRect2D       = T2DRect;
+  TGeoFloat = Single;
+  TGeoInt   = Integer;
+  TVec2     = packed array [0 .. 1] of TGeoFloat;
+  PVec2     = ^TVec2;
+  T2DPoint  = TVec2;
+  P2DPoint  = PVec2;
+  TPoint2   = T2DPoint;
 
-  {$IFDEF FPC}
+  TArrayVec2 = packed array of TVec2;
+  PArrayVec2 = ^TArrayVec2;
+
+  TArray2DPoint = TArrayVec2;
+  PArray2DPoint = PArrayVec2;
+
+  TRectV2 = packed array [0 .. 1] of TVec2;
+  PRectV2 = ^TRectV2;
+  TRect2  = TRectV2;
+  TRect2D = TRectV2;
+
+  TVert2 = packed record
+    Render: TVec2;
+    Sampler: TVec2;
+  end;
+
+  PVert2 = ^TVert2;
+
+  TTriangle = array [0 .. 2] of TVert2;
+  PTriangle = ^TTriangle;
+
+  TGeoFloatArray = array of TGeoFloat;
+  PGeoFloatArray = ^TGeoFloatArray;
+
+{$IFDEF FPC}
 
   TPointf = packed record
     X: TGeoFloat;
@@ -58,9 +79,13 @@ const
   XPoint: T2DPoint    = (1, 0);
   YPoint: T2DPoint    = (0, 1);
   NULLPoint: T2DPoint = (0, 0);
+  NULLVec2: T2DPoint  = (0, 0);
   ZeroPoint: T2DPoint = (0, 0);
-  NULLRect: T2DRect   = ((0, 0), (0, 0));
-  ZeroRect: T2DRect   = ((0, 0), (0, 0));
+  ZeroVec2: T2DPoint  = (0, 0);
+  NULLRect: TRectV2   = ((0, 0), (0, 0));
+  ZeroRect: TRectV2   = ((0, 0), (0, 0));
+  NULLRectV2: TRectV2 = ((0, 0), (0, 0));
+  ZeroRectV2: TRectV2 = ((0, 0), (0, 0));
 
 const
   RightHandSide        = -1;
@@ -70,184 +95,217 @@ const
   BelowOrientation     = -1;
   CoplanarOrientation  = 0;
 
-function RangeValue(const v, minv, maxv: TGeoFloat): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function ClampValue(const v, minv, maxv: TGeoFloat): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function fabs(const v: Single): Single; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function fabs(const v: Double): Double; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Range(const v, minv, maxv: TGeoFloat): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Clamp(const v, minv, maxv: TGeoFloat): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 function MaxValue(const v1, v2: TGeoFloat): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 function MinValue(const v1, v2: TGeoFloat): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-function MakePoint(const X, Y: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function MakePoint(const X, Y: Integer): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function Point2Point(const pt: T2DPoint): TPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function Point2Pointf(const pt: T2DPoint): TPointf; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointMake(const X, Y: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointMake(const pt: TPoint): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointMake(const pt: TPointf): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function Make2DPoint(const X, Y: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function Make2DPoint(const X, Y: Integer): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function Make2DPoint(const pt: TPoint): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function Make2DPoint(const pt: TPointf): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function MakePointf(const pt: T2DPoint): TPointf; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function MakeVec2(const X, Y: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function MakeVec2(const X, Y: Integer): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function MakePoint(const X, Y: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function MakePoint(const X, Y: Integer): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Point2Point(const pt: TVec2): TPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Point2Pointf(const pt: TVec2): TPointf; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function PointMake(const X, Y: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function PointMake(const pt: TPoint): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function PointMake(const pt: TPointf): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+
+function Make2DPoint(const X, Y: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Make2DPoint(const X, Y: Integer): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Make2DPoint(const pt: TPoint): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Make2DPoint(const pt: TPointf): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+
+function vec2(const X, Y: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function vec2(const X, Y: Integer): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function vec2(const X, Y: Int64): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function vec2(const pt: TPoint): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function vec2(const pt: TPointf): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+
+function RoundVec2(const v: TVec2): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+
+function MakePointf(const pt: TVec2): TPointf; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
 function IsZero(const v: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function IsZero(const pt: T2DPoint): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function IsZero(const r: T2DRect): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function IsZero(const pt: TVec2): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function IsZero(const R: TRectV2): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
-function IsNan(const pt: T2DPoint): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function IsNan(const pt: TVec2): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 function IsNan(const X, Y: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 function HypotX(const X, Y: Extended): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
-function PointNorm(const v: T2DPoint): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointNegate(const v: T2DPoint): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function PointNorm(const v: TVec2): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function PointNegate(const v: TVec2): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
-procedure SetPoint(var v: T2DPoint; const vSrc: T2DPoint); {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointAdd(const v1, v2: T2DPoint): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointAdd(const v1: T2DPoint; v2: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointAdd(const v1: T2DPoint; X, Y: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointSub(const v1, v2: T2DPoint): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointSub(const v1: T2DPoint; v2: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function vec2Inv(const v: TVec2): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+procedure SetVec2(var v: TVec2; const vSrc: TVec2); {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
-function PointMul(const v1, v2: T2DPoint): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointMul(const v1, v2: T2DPoint; const v3: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointMul(const v1, v2: T2DPoint; const v3, v4: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointMul(const v1, v2, v3: T2DPoint): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointMul(const v1, v2, v3, v4: T2DPoint): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointMul(const v1: T2DPoint; const v2: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointMul(const v1: T2DPoint; const v2, v3: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointMul(const v1: T2DPoint; const v2, v3, v4: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Vec2Add(const v1, v2: TVec2): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Vec2Add(const v1: TVec2; v2: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Vec2Add(const v1: TVec2; X, Y: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
-function PointDiv(const v1: T2DPoint; const v2: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointNormalize(const v: T2DPoint): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointLength(const v: T2DPoint): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-procedure ScalePoint(var v: T2DPoint; factor: TGeoFloat); {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointDotProduct(const v1, v2: T2DPoint): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Vec2Sub(const v1, v2: TVec2): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Vec2Sub(const v1: TVec2; v2: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+
+function Vec2Mul(const v1, v2: TVec2): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Vec2Mul(const v1, v2: TVec2; const v3: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Vec2Mul(const v1, v2: TVec2; const v3, v4: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Vec2Mul(const v1, v2, v3: TVec2): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Vec2Mul(const v1, v2, v3, v4: TVec2): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Vec2Mul(const v1: TVec2; const v2: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Vec2Mul(const v1: TVec2; const v2, v3: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Vec2Mul(const v1: TVec2; const v2, v3, v4: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+
+function Vec2Div(const v1: TVec2; const v2: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Vec2Div(const v1, v2: TVec2): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+
+function PointNormalize(const v: TVec2): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function PointLength(const v: TVec2): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+procedure PointScale(var v: TVec2; factor: TGeoFloat); {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function PointDotProduct(const v1, v2: TVec2): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 function Distance(const x1, y1, x2, y2: TGeoFloat): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 function Distance(const x1, y1, z1, x2, y2, z2: TGeoFloat): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 function PointDistance(const x1, y1, x2, y2: TGeoFloat): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointDistance(const v1, v2: T2DPoint): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointLayDistance(const v1, v2: T2DPoint): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function SqrDistance(const v1, v2: T2DPoint): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointLerp(const v1, v2: T2DPoint; t: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointLerpTo(const sour, dest: T2DPoint; const d: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-procedure SwapPoint(var v1, v2: T2DPoint); {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function PointDistance(const v1, v2: TVec2): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Vec2Distance(const v1, v2: TVec2): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function PointLayDistance(const v1, v2: TVec2): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function SqrDistance(const v1, v2: TVec2): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function PointLerp(const v1, v2: TVec2; T: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function PointLerpTo(const sour, dest: TVec2; const d: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Vec2Lerp(const v1, v2: TVec2; T: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Vec2LerpTo(const sour, dest: TVec2; const d: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+procedure SwapPoint(var v1, v2: TVec2); {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 function Pow(v: TGeoFloat): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function MidPoint(const pt1, pt2: T2DPoint): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Pow(const v, n: TGeoFloat): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function MiddleVec2(const pt1, pt2: TVec2): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
 function IsEqual(const Val1, Val2, Epsilon: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 function IsEqual(const Val1, Val2: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function IsEqual(const Val1, Val2: T2DPoint): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function IsEqual(const Val1, Val2: T2DPoint; Epsilon: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function IsEqual(const Val1, Val2: T2DRect): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function IsEqual(const Val1, Val2: TVec2): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function IsEqual(const Val1, Val2: TVec2; Epsilon: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function IsEqual(const Val1, Val2: TRectV2): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
 function NotEqual(const Val1, Val2, Epsilon: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 function NotEqual(const Val1, Val2: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function NotEqual(const Val1, Val2: T2DPoint): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function NotEqual(const Val1, Val2: TVec2): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
 function LessThanOrEqual(const Val1, Val2: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 function GreaterThanOrEqual(const Val1, Val2: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function GetEquilateralTriangleCen(pt1, pt2: T2DPoint): T2DPoint; overload;
+function GetEquilateralTriangleCen(pt1, pt2: TVec2): TVec2; overload;
 
 procedure Rotate(RotAng: TGeoFloat; const X, Y: TGeoFloat; out Nx, Ny: TGeoFloat); {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function Rotate(const RotAng: TGeoFloat; const Point: T2DPoint): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Rotate(const RotAng: TGeoFloat; const Point: TVec2): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 function NormalizeDegAngle(angle: TGeoFloat): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
 // axis to pt angle
-function PointAngle(const axis, pt: T2DPoint): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function PointAngle(const Axis, pt: TVec2): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 // null point to pt angle
-function PointAngle(const pt: T2DPoint): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function PointAngle(const pt: TVec2): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
-function AngleDistance(const s, a: TGeoFloat): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointRotation(const axis: T2DPoint; const Dist, angle: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointRotation(const axis, pt: T2DPoint; const angle: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function AngleDistance(const s, A: TGeoFloat): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function PointRotation(const Axis: TVec2; const Dist, angle: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function PointRotation(const Axis, pt: TVec2; const angle: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
-function CircleInCircle(const cp1, cp2: T2DPoint; const r1, r2: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function CircleInRect(const cp: T2DPoint; const radius: TGeoFloat; r: T2DRect): Boolean;
+function CircleInCircle(const cp1, cp2: TVec2; const r1, r2: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function CircleInRect(const cp: TVec2; const radius: TGeoFloat; R: TRectV2): Boolean;
 function PointInRect(const Px, Py: TGeoFloat; const x1, y1, x2, y2: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 function PointInRect(const Px, Py: TGeoInt; const x1, y1, x2, y2: TGeoInt): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointInRect(const pt: T2DPoint; const r: T2DRect): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointInRect(const Px, Py: TGeoFloat; const r: T2DRect): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function PointInRect(const pt: TVec2; const R: TRectV2): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function PointInRect(const Px, Py: TGeoFloat; const R: TRectV2): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 function RectToRectIntersect(const x1, y1, x2, y2, x3, y3, x4, y4: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 function RectToRectIntersect(const x1, y1, x2, y2, x3, y3, x4, y4: TGeoInt): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function RectToRectIntersect(const r1, r2: T2DRect): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function RectToRectIntersect(const r1, r2: TRectV2): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 function RectToRectIntersect(const r1, r2: TRect): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 function RectToRectIntersect(const r1, r2: TRectf): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 function RectWithinRect(const x1, y1, x2, y2, x3, y3, x4, y4: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 function RectWithinRect(const x1, y1, x2, y2, x3, y3, x4, y4: TGeoInt): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function RectWithinRect(const r1, r2: T2DRect): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function RectWithinRect(const r1, r2: TRectV2): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 function RectWithinRect(const r1, r2: TRect): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
-function Make2DRect(const X, Y, radius: TGeoFloat): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function Make2DRect(const x1, y1, x2, y2: TGeoFloat): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function Make2DRect(const p1, p2: T2DPoint): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function Make2DRect(const X, Y: TGeoFloat; const p2: T2DPoint): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function Make2DRect(const r: TRect): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function Make2DRect(const r: TRectf): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function MakeRectV2(const X, Y, radius: TGeoFloat): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function MakeRectV2(const x1, y1, x2, y2: TGeoFloat): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function MakeRectV2(const p1, p2: TVec2): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function MakeRectV2(const X, Y: TGeoFloat; const p2: TVec2): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function MakeRectV2(const R: TRect): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function MakeRectV2(const R: TRectf): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
-function MakeRect(const X, Y, radius: TGeoFloat): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function MakeRect(const x1, y1, x2, y2: TGeoFloat): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function MakeRect(const p1, p2: T2DPoint): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function MakeRect(const r: TRect): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function MakeRect(const r: TRectf): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function Rect2Rect(const r: T2DRect): TRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function Rect2Rect(const r: TRect): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function RectV2(const X, Y, radius: TGeoFloat): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function RectV2(const x1, y1, x2, y2: TGeoFloat): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function RectV2(const p1, p2: TVec2): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function RectV2(const X, Y: TGeoFloat; const p2: TVec2): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function RectV2(const R: TRect): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function RectV2(const R: TRectf): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
-function RectMake(const X, Y, radius: TGeoFloat): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function RectMake(const x1, y1, x2, y2: TGeoFloat): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function RectMake(const p1, p2: T2DPoint): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function RectMake(const r: TRect): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function RectMake(const r: TRectf): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function MakeRect(const X, Y, radius: TGeoFloat): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function MakeRect(const x1, y1, x2, y2: TGeoFloat): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function MakeRect(const p1, p2: TVec2): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function MakeRect(const R: TRect): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function MakeRect(const R: TRectf): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Rect2Rect(const R: TRectV2): TRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Rect2Rect(const R: TRect): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
-function RectAdd(const r: T2DRect; pt: T2DPoint): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function RectAdd(const r1, r2: T2DRect): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function RectSub(const r1, r2: T2DRect): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function RectMul(const r1, r2: T2DRect): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function RectMul(const r1: T2DRect; r2: TGeoFloat): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function RectOffset(const r: T2DRect; offset: T2DPoint): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function RectSizeLerp(const r: T2DRect; const rSizeLerp: TGeoFloat): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function RectCenScale(const r: T2DRect; const rSizeScale: TGeoFloat): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function RectEndge(const r: T2DRect; const endge: TGeoFloat): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function RectEndge(const r: T2DRect; const endge: T2DPoint): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function RectCentre(const r: T2DRect): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function RectMake(const X, Y, radius: TGeoFloat): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function RectMake(const x1, y1, x2, y2: TGeoFloat): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function RectMake(const p1, p2: TVec2): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function RectMake(const R: TRect): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function RectMake(const R: TRectf): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+
+function RectAdd(const R: TRectV2; pt: TVec2): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function RectAdd(const r1, r2: TRectV2): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function RectSub(const r1, r2: TRectV2): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function RectMul(const r1, r2: TRectV2): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function RectMul(const r1: TRectV2; r2: TGeoFloat): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function RectOffset(const R: TRectV2; Offset: TVec2): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function RectSizeLerp(const R: TRectV2; const rSizeLerp: TGeoFloat): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function RectCenScale(const R: TRectV2; const rSizeScale: TGeoFloat): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function RectEndge(const R: TRectV2; const endge: TGeoFloat): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function RectEndge(const R: TRectV2; const endge: TVec2): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function RectCentre(const R: TRectV2): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
 procedure FixRect(var Left, Top, Right, Bottom: Integer); overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 procedure FixRect(var Left, Top, Right, Bottom: TGeoFloat); overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-function FixRect(r: T2DRect): T2DRect; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-function FixRect(r: TRect): TRect; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function FixRect(R: TRectV2): TRectV2; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function FixRect(R: TRect): TRect; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 
-function MakeRect(const r: T2DRect): TRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function MakeRectf(const r: T2DRect): TRectf; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function MakeRect(const R: TRectV2): TRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function MakeRectf(const R: TRectV2): TRectf; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
-function RectWidth(const r: T2DRect): TGeoFloat; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-function RectHeight(const r: T2DRect): TGeoFloat; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function RectWidth(const R: TRectV2): TGeoFloat; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function RectHeight(const R: TRectV2): TGeoFloat; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 
-function RectArea(const r: T2DRect): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-function RectSize(const r: T2DRect): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-function RectFit(const r, b: T2DRect): T2DRect; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-function RectFit(const width, height: TGeoFloat; const b: T2DRect): T2DRect; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-function BoundRect(const Buff: TArray2DPoint): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function BoundRect(const p1, p2, p3, p4: T2DPoint): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function BoundRect(const r1, r2: T2DRect): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function BuffCentroid(const Buff: TArray2DPoint): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function BuffCentroid(const p1, p2, p3, p4: T2DPoint): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function RectArea(const R: TRectV2): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function RectSize(const R: TRectV2): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function RectFit(const R, b: TRectV2): TRectV2; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function RectFit(const width, height: TGeoFloat; const b: TRectV2): TRectV2; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function BoundRect(const buff: TArrayVec2): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function BoundRect(const p1, p2, p3, p4: TVec2): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function BoundRect(const r1, r2: TRectV2): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function BuffCentroid(const buff: TArrayVec2): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function BuffCentroid(const p1, p2, p3, p4: TVec2): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
-function FastRamerDouglasPeucker(var Points: TArray2DPoint; Epsilon: TGeoFloat): Integer; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-procedure FastVertexReduction(Points: TArray2DPoint; Epsilon: TGeoFloat; var output: TArray2DPoint);
+function FastRamerDouglasPeucker(var Points: TArrayVec2; Epsilon: TGeoFloat): Integer; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+procedure FastVertexReduction(Points: TArrayVec2; Epsilon: TGeoFloat; var output: TArrayVec2);
 
 function Clip(const x1, y1, x2, y2, x3, y3, x4, y4: TGeoFloat; out Cx1, Cy1, Cx2, Cy2: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function Clip(const r1, r2: T2DRect; out r3: T2DRect): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Clip(const r1, r2: TRectV2; out r3: TRectV2): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
 function Orientation(const x1, y1, x2, y2, Px, Py: TGeoFloat): Integer; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 function Orientation(const x1, y1, z1, x2, y2, z2, x3, y3, z3, Px, Py, Pz: TGeoFloat): Integer; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 function Coplanar(const x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
 function SimpleIntersect(const x1, y1, x2, y2, x3, y3, x4, y4: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function SimpleIntersect(const Point1, Point2, Point3, Point4: T2DPoint): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function SimpleIntersect(const Point1, Point2, Point3, Point4: TVec2): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 function Intersect(const x1, y1, x2, y2, x3, y3, x4, y4: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 function Intersect(const x1, y1, x2, y2, x3, y3, x4, y4: TGeoFloat; out ix, iy: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function Intersect(const pt1, pt2, pt3, pt4: T2DPoint; out pt: T2DPoint): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function Intersect(const pt1, pt2, pt3, pt4: T2DPoint): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function PointInCircle(const pt, cp: T2DPoint; radius: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Intersect(const pt1, pt2, pt3, pt4: TVec2; out pt: TVec2): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Intersect(const pt1, pt2, pt3, pt4: TVec2): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function PointInCircle(const pt, cp: TVec2; radius: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+
+function PointInTriangle(const Px, Py, x1, y1, x2, y2, x3, y3: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+procedure BuildSinCosCache(const oSin, oCos: PGeoFloatArray; const b, E: TGeoFloat);
 
 procedure ClosestPointOnSegmentFromPoint(const x1, y1, x2, y2, Px, Py: TGeoFloat; out Nx, Ny: TGeoFloat); {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function ClosestPointOnSegmentFromPoint(const lb, le, pt: T2DPoint): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function ClosestPointOnSegmentFromPoint(const lb, le, pt: TVec2): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
 function MinimumDistanceFromPointToLine(const Px, Py, x1, y1, x2, y2: TGeoFloat): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 function Quadrant(const angle: TGeoFloat): Integer; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
@@ -265,50 +323,52 @@ procedure ProjectPoint225(const Px, Py, Distance: TGeoFloat; out Nx, Ny: TGeoFlo
 procedure ProjectPoint270(const Px, Py, Distance: TGeoFloat; out Nx, Ny: TGeoFloat); {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 procedure ProjectPoint315(const Px, Py, Distance: TGeoFloat; out Nx, Ny: TGeoFloat); {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
-function ProjectPoint0(const Point: T2DPoint; const Distance: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function ProjectPoint45(const Point: T2DPoint; const Distance: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function ProjectPoint90(const Point: T2DPoint; const Distance: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function ProjectPoint135(const Point: T2DPoint; const Distance: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function ProjectPoint180(const Point: T2DPoint; const Distance: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function ProjectPoint225(const Point: T2DPoint; const Distance: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function ProjectPoint270(const Point: T2DPoint; const Distance: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function ProjectPoint315(const Point: T2DPoint; const Distance: TGeoFloat): T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function ProjectPoint0(const Point: TVec2; const Distance: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function ProjectPoint45(const Point: TVec2; const Distance: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function ProjectPoint90(const Point: TVec2; const Distance: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function ProjectPoint135(const Point: TVec2; const Distance: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function ProjectPoint180(const Point: TVec2; const Distance: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function ProjectPoint225(const Point: TVec2; const Distance: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function ProjectPoint270(const Point: TVec2; const Distance: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function ProjectPoint315(const Point: TVec2; const Distance: TGeoFloat): TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
-function GetCicleRadiusInPolyEndge(r: TGeoFloat; PolySlices: Integer): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function GetCicleRadiusInPolyEndge(R: TGeoFloat; PolySlices: Integer): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 
-procedure Circle2LineIntersectionPoint(const lb, le, cp: T2DPoint; const radius: TGeoFloat;
-  out pt1in, pt2in: Boolean; out ICnt: Integer; out pt1, pt2: T2DPoint);
+procedure Circle2LineIntersectionPoint(const lb, le, cp: TVec2; const radius: TGeoFloat;
+  out pt1in, pt2in: Boolean; out ICnt: Integer; out pt1, pt2: TVec2);
 
-procedure Circle2CircleIntersectionPoint(const cp1, cp2: T2DPoint; const r1, r2: TGeoFloat; out Point1, Point2: T2DPoint); {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+procedure Circle2CircleIntersectionPoint(const cp1, cp2: TVec2; const r1, r2: TGeoFloat; out Point1, Point2: TVec2); {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
-// circle collision check
-function Check_Circle2Circle(const p1, p2: T2DPoint; const r1, r2: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
-function CircleCollision(const p1, p2: T2DPoint; const r1, r2: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+// circle collision Detect
+function Detect_Circle2Circle(const p1, p2: TVec2; const r1, r2: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function CircleCollision(const p1, p2: TVec2; const r1, r2: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
-function Check_Circle2CirclePoint(const p1, p2: T2DPoint; const r1, r2: TGeoFloat; out op1, op2: T2DPoint): Boolean;
+function Detect_Circle2CirclePoint(const p1, p2: TVec2; const r1, r2: TGeoFloat; out op1, op2: TVec2): Boolean;
 // circle 2 line collision
-function Check_Circle2Line(const cp: T2DPoint; const r: TGeoFloat; const lb, le: T2DPoint): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function Detect_Circle2Line(const cp: TVec2; const R: TGeoFloat; const lb, le: TVec2): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 
 type
-  T2DPointList = class;
-  TPoly        = class;
-  T2DLineList  = class;
+  TVec2List   = class;
+  TPoly       = class;
+  T2DLineList = class;
 
-  T2DPointList = class(TCoreClassPersistent)
+  TVec2List = class(TCoreClassPersistent)
   private
-    FList      : TCoreClassList;
-    FUserData  : Pointer;
+    FList: TCoreClassList;
+    FUserData: Pointer;
     FUserObject: TCoreClassObject;
 
-    function GetPoints(Index: Integer): P2DPoint;
+    function GetPoints(index: Integer): PVec2;
   public
     constructor Create;
     destructor Destroy; override;
 
-    procedure Add(X, Y: TGeoFloat); overload;
-    procedure Add(pt: T2DPoint); overload;
-    procedure AddSubdivision(nbCount: Integer; pt: T2DPoint); overload;
-    procedure AddSubdivisionWithDistance(avgDist: TGeoFloat; pt: T2DPoint); overload;
+    procedure Add(const X, Y: TGeoFloat); overload;
+    procedure Add(const pt: TVec2); overload;
+    procedure Add(v2l: TVec2List); overload;
+    procedure Add(R: TRectV2); overload;
+    procedure AddSubdivision(nbCount: Integer; pt: TVec2); overload;
+    procedure AddSubdivisionWithDistance(avgDist: TGeoFloat; pt: TVec2); overload;
     procedure Insert(idx: Integer; X, Y: TGeoFloat); overload;
     procedure Delete(idx: Integer); overload;
     procedure Clear; overload;
@@ -317,58 +377,61 @@ type
 
     procedure Assign(Source: TCoreClassPersistent); override;
 
-    procedure SaveToStream(Stream: TCoreClassStream); overload;
-    procedure LoadFromStream(Stream: TCoreClassStream); overload;
+    procedure SaveToStream(stream: TCoreClassStream); overload;
+    procedure LoadFromStream(stream: TCoreClassStream); overload;
 
-    function BoundRect: T2DRect; overload;
-    function CircleRadius(ACentroid: T2DPoint): TGeoFloat; overload;
-    function Centroid: T2DPoint; overload;
+    function BoundRect: TRectV2; overload;
+    function CircleRadius(ACentroid: TVec2): TGeoFloat; overload;
+    function Centroid: TVec2; overload;
 
-    function PointInHere(pt: T2DPoint): Boolean; overload;
+    function PointInHere(pt: TVec2): Boolean; overload;
 
-    procedure RotateAngle(axis: T2DPoint; angle: TGeoFloat); overload;
+    procedure RotateAngle(Axis: TVec2; angle: TGeoFloat); overload;
 
-    procedure Scale(axis: T2DPoint; Scale: TGeoFloat); overload;
+    procedure Scale(Axis: TVec2; Scale: TGeoFloat); overload;
 
-    procedure ConvexHull(output: T2DPointList); overload;
+    procedure ConvexHull(output: TVec2List); overload;
 
-    procedure ExtractToBuff(var output: TArray2DPoint); overload;
-    procedure GiveListDataFromBuff(output: PArray2DPoint); overload;
+    procedure ExtractToBuff(var output: TArrayVec2); overload;
+    procedure GiveListDataFromBuff(output: PArrayVec2); overload;
     procedure VertexReduction(Epsilon: TGeoFloat); overload;
 
-    function Line2Intersect(const lb, le: T2DPoint; ClosedPolyMode: Boolean; OutputPoint: T2DPointList): Boolean; overload;
-    function Line2NearIntersect(const lb, le: T2DPoint; const ClosedPolyMode: Boolean; out idx1, idx2: Integer; out IntersectPt: T2DPoint): Boolean; overload;
+    function Line2Intersect(const lb, le: TVec2; ClosedPolyMode: Boolean; OutputPoint: TVec2List): Boolean; overload;
+    function Line2NearIntersect(const lb, le: TVec2; const ClosedPolyMode: Boolean; out idx1, idx2: Integer; out IntersectPt: TVec2): Boolean; overload;
 
-    procedure SortOfNear(const pt: T2DPoint); overload;
-    procedure SortOfFar(const pt: T2DPoint); overload;
+    procedure SortOfNear(const pt: TVec2); overload;
+    procedure SortOfFar(const pt: TVec2); overload;
 
     procedure Reverse; overload;
 
-    procedure AddCirclePoint(ACount: Cardinal; axis: T2DPoint; ADist: TGeoFloat);
-    procedure AddRectangle(r: T2DRect);
+    procedure AddCirclePoint(aCount: Cardinal; Axis: TVec2; ADist: TGeoFloat);
+    procedure AddRectangle(R: TRectV2);
 
-    function GetMinimumFromPointToLine(const pt: T2DPoint; const ClosedMode: Boolean; out lb, le: Integer): T2DPoint; overload;
-    function GetMinimumFromPointToLine(const pt: T2DPoint; const ClosedMode: Boolean): T2DPoint; overload;
-    function GetMinimumFromPointToLine(const pt: T2DPoint; const ExpandDist: TGeoFloat): T2DPoint; overload;
-    procedure CutLineBeginPtToIdx(const pt: T2DPoint; const toidx: Integer);
+    function GetMinimumFromPointToLine(const pt: TVec2; const ClosedMode: Boolean; out lb, le: Integer): TVec2; overload;
+    function GetMinimumFromPointToLine(const pt: TVec2; const ClosedMode: Boolean): TVec2; overload;
+    function GetMinimumFromPointToLine(const pt: TVec2; const ExpandDist: TGeoFloat): TVec2; overload;
+    procedure CutLineBeginPtToIdx(const pt: TVec2; const toidx: Integer);
 
-    procedure Translation(X, Y: TGeoFloat); overload;
+    procedure Transform(X, Y: TGeoFloat); overload;
     procedure Mul(X, Y: TGeoFloat); overload;
+    procedure FDiv(X, Y: TGeoFloat); overload;
 
-    property Items[index: Integer]: P2DPoint read GetPoints;
-    property Points[index: Integer]: P2DPoint read GetPoints; default;
-    function First: P2DPoint;
-    function Last: P2DPoint;
+    property Items[index: Integer]: PVec2 read GetPoints;
+    property Points[index: Integer]: PVec2 read GetPoints; default;
+    function First: PVec2;
+    function Last: PVec2;
 
-    procedure ExpandDistanceAsList(ExpandDist: TGeoFloat; output: T2DPointList);
-    procedure ExpandConvexHullAsList(ExpandDist: TGeoFloat; output: T2DPointList);
+    procedure ExpandDistanceAsList(ExpandDist: TGeoFloat; output: TVec2List);
+    procedure ExpandConvexHullAsList(ExpandDist: TGeoFloat; output: TVec2List);
 
-    function GetExpands(idx: Integer; ExpandDist: TGeoFloat): T2DPoint;
-    property Expands[idx: Integer; ExpandDist: TGeoFloat]: T2DPoint read GetExpands;
+    function GetExpands(idx: Integer; ExpandDist: TGeoFloat): TVec2;
+    property Expands[idx: Integer; ExpandDist: TGeoFloat]: TVec2 read GetExpands;
 
     property UserData: Pointer read FUserData write FUserData;
     property UserObject: TCoreClassObject read FUserObject write FUserObject;
   end;
+
+  T2DPointList = TVec2List;
 
   PPolyPoint = ^TPolyPoint;
 
@@ -382,17 +445,17 @@ type
 
   TPoly = class(TCoreClassPersistent)
   private
-    FList      : TCoreClassList;
-    FScale     : TGeoFloat;
-    FAngle     : TGeoFloat;
-    FMaxRadius : TGeoFloat;
-    FPosition  : T2DPoint;
+    FList: TCoreClassList;
+    FScale: TGeoFloat;
+    FAngle: TGeoFloat;
+    FMaxRadius: TGeoFloat;
+    FPosition: TVec2;
     FExpandMode: TExpandMode;
 
     FUserDataObject: TCoreClassObject;
-    FUserData      : Pointer;
+    FUserData: Pointer;
 
-    function GetPoly(Index: Integer): PPolyPoint;
+    function GetPoly(index: Integer): PPolyPoint;
   public
     constructor Create;
     destructor Destroy; override;
@@ -401,7 +464,7 @@ type
 
     procedure Assign(Source: TCoreClassPersistent); override;
 
-    procedure AddPoint(pt: T2DPoint); overload;
+    procedure AddPoint(pt: TVec2); overload;
     procedure AddPoint(X, Y: TGeoFloat); overload;
     procedure Add(AAngle, ADist: TGeoFloat); overload;
     procedure Insert(idx: Integer; angle, Dist: TGeoFloat); overload;
@@ -417,82 +480,82 @@ type
     procedure FixedSameError;
 
     { * auto build opt from convex hull point * }
-    procedure ConvexHullFromPoint(AFrom: T2DPointList); overload;
-    procedure RebuildPoly(pl: T2DPointList); overload;
+    procedure ConvexHullFromPoint(AFrom: TVec2List); overload;
+    procedure RebuildPoly(pl: TVec2List); overload;
     procedure RebuildPoly; overload;
-    procedure RebuildPoly(AScale: TGeoFloat; AAngle: TGeoFloat; AExpandMode: TExpandMode; APosition: T2DPoint); overload;
+    procedure RebuildPoly(AScale: TGeoFloat; AAngle: TGeoFloat; AExpandMode: TExpandMode; APosition: TVec2); overload;
 
-    function BoundRect: T2DRect; overload;
-    function Centroid: T2DPoint; overload;
+    function BoundRect: TRectV2; overload;
+    function Centroid: TVec2; overload;
 
     { * fast line intersect * }
-    function PointInHere(pt: T2DPoint): Boolean; overload;
-    function LineNearIntersect(const lb, le: T2DPoint; const ClosedPolyMode: Boolean;
-      out idx1, idx2: Integer; out IntersectPt: T2DPoint): Boolean; overload;
-    function LineIntersect(const lb, le: T2DPoint; const ClosedPolyMode: Boolean): Boolean; overload;
-    function GetMinimumFromPointToPoly(const pt: T2DPoint; const ClosedPolyMode: Boolean; out lb, le: Integer): T2DPoint; overload;
+    function PointInHere(pt: TVec2): Boolean; overload;
+    function LineNearIntersect(const lb, le: TVec2; const ClosedPolyMode: Boolean;
+      out idx1, idx2: Integer; out IntersectPt: TVec2): Boolean; overload;
+    function LineIntersect(const lb, le: TVec2; const ClosedPolyMode: Boolean): Boolean; overload;
+    function GetMinimumFromPointToPoly(const pt: TVec2; const ClosedPolyMode: Boolean; out lb, le: Integer): TVec2; overload;
 
     { * expand intersect * }
-    function PointInHere(AExpandDistance: TGeoFloat; pt: T2DPoint): Boolean; overload;
-    function LineNearIntersect(AExpandDistance: TGeoFloat; const lb, le: T2DPoint; const ClosedPolyMode: Boolean;
-      out idx1, idx2: Integer; out IntersectPt: T2DPoint): Boolean; overload;
-    function LineIntersect(AExpandDistance: TGeoFloat; const lb, le: T2DPoint; const ClosedPolyMode: Boolean): Boolean; overload;
+    function PointInHere(AExpandDistance: TGeoFloat; pt: TVec2): Boolean; overload;
+    function LineNearIntersect(AExpandDistance: TGeoFloat; const lb, le: TVec2; const ClosedPolyMode: Boolean;
+      out idx1, idx2: Integer; out IntersectPt: TVec2): Boolean; overload;
+    function LineIntersect(AExpandDistance: TGeoFloat; const lb, le: TVec2; const ClosedPolyMode: Boolean): Boolean; overload;
 
-    function GetMinimumFromPointToPoly(AExpandDistance: TGeoFloat; const pt: T2DPoint; const ClosedPolyMode: Boolean; out lb, le: Integer): T2DPoint; overload;
+    function GetMinimumFromPointToPoly(AExpandDistance: TGeoFloat; const pt: TVec2; const ClosedPolyMode: Boolean; out lb, le: Integer): TVec2; overload;
 
-    function Collision2Circle(cp: T2DPoint; r: TGeoFloat; ClosedPolyMode: Boolean): Boolean; overload;
-    function Collision2Circle(cp: T2DPoint; r: TGeoFloat; ClosedPolyMode: Boolean; OutputLine: T2DLineList): Boolean; overload;
-    function Collision2Circle(AExpandDistance: TGeoFloat; cp: T2DPoint; r: TGeoFloat; ClosedPolyMode: Boolean; OutputLine: T2DLineList): Boolean; overload;
+    function Collision2Circle(cp: TVec2; R: TGeoFloat; ClosedPolyMode: Boolean): Boolean; overload;
+    function Collision2Circle(cp: TVec2; R: TGeoFloat; ClosedPolyMode: Boolean; OutputLine: T2DLineList): Boolean; overload;
+    function Collision2Circle(AExpandDistance: TGeoFloat; cp: TVec2; R: TGeoFloat; ClosedPolyMode: Boolean; OutputLine: T2DLineList): Boolean; overload;
 
     function PolyIntersect(APoly: TPoly): Boolean;
 
-    function LerpToOfEndge(pt: T2DPoint; AProjDistance, AExpandDistance: TGeoFloat; FromIdx, toidx: Integer): T2DPoint;
+    function LerpToEndge(pt: TVec2; AProjDistance, AExpandDistance: TGeoFloat; FromIdx, toidx: Integer): TVec2;
 
     property Scale: TGeoFloat read FScale write FScale;
     property angle: TGeoFloat read FAngle write FAngle;
     property Poly[index: Integer]: PPolyPoint read GetPoly;
-    property Position: T2DPoint read FPosition write FPosition;
+    property Position: TVec2 read FPosition write FPosition;
     property MaxRadius: TGeoFloat read FMaxRadius;
     property ExpandMode: TExpandMode read FExpandMode write FExpandMode;
 
-    function GetPoint(idx: Integer): T2DPoint;
-    procedure SetPoint(idx: Integer; Value: T2DPoint);
-    property Points[idx: Integer]: T2DPoint read GetPoint write SetPoint; default;
+    function GetPoint(idx: Integer): TVec2;
+    procedure SetPoint(idx: Integer; Value: TVec2);
+    property Points[idx: Integer]: TVec2 read GetPoint write SetPoint; default;
 
-    function GetExpands(idx: Integer; ExpandDist: TGeoFloat): T2DPoint;
-    property Expands[idx: Integer; ExpandDist: TGeoFloat]: T2DPoint read GetExpands;
+    function GetExpands(idx: Integer; ExpandDist: TGeoFloat): TVec2;
+    property Expands[idx: Integer; ExpandDist: TGeoFloat]: TVec2 read GetExpands;
 
-    procedure SaveToStream(Stream: TCoreClassStream); overload;
-    procedure LoadFromStream(Stream: TCoreClassStream); overload;
+    procedure SaveToStream(stream: TCoreClassStream); overload;
+    procedure LoadFromStream(stream: TCoreClassStream); overload;
 
     property UserDataObject: TCoreClassObject read FUserDataObject write FUserDataObject;
     property UserData: Pointer read FUserData write FUserData;
   end;
 
   T2DLine = packed record
-    Buff: array [0 .. 1] of T2DPoint;
+    buff: array [0 .. 1] of TVec2;
     Poly: TPoly;
     PolyIndex: array [0 .. 1] of Integer;
-    Index: Integer;
+    index: Integer;
   public
-    procedure SetLocation(const lb, le: T2DPoint);
+    procedure SetLocation(const lb, le: TVec2);
     function ExpandPoly(ExpandDist: TGeoFloat): T2DLine;
-    function Length: TGeoFloat;
-    function MinimumDistance(const pt: T2DPoint): TGeoFloat; overload;
-    function MinimumDistance(ExpandDist: TGeoFloat; const pt: T2DPoint): TGeoFloat; overload;
-    function ClosestPointFromLine(const pt: T2DPoint): T2DPoint; overload;
-    function ClosestPointFromLine(ExpandDist: TGeoFloat; const pt: T2DPoint): T2DPoint; overload;
-    function MiddlePoint: T2DPoint;
+    function length: TGeoFloat;
+    function MinimumDistance(const pt: TVec2): TGeoFloat; overload;
+    function MinimumDistance(ExpandDist: TGeoFloat; const pt: TVec2): TGeoFloat; overload;
+    function ClosestPointFromLine(const pt: TVec2): TVec2; overload;
+    function ClosestPointFromLine(ExpandDist: TGeoFloat; const pt: TVec2): TVec2; overload;
+    function MiddlePoint: TVec2;
   end;
 
   P2DLine = ^T2DLine;
 
   T2DLineList = class(TCoreClassPersistent)
   private
-    FList      : TCoreClassList;
-    FUserData  : Pointer;
+    FList: TCoreClassList;
+    FUserData: Pointer;
     FUserObject: TCoreClassObject;
-    function GetItems(Index: Integer): P2DLine;
+    function GetItems(index: Integer): P2DLine;
   public
     constructor Create;
     destructor Destroy; override;
@@ -501,17 +564,17 @@ type
 
     property Items[index: Integer]: P2DLine read GetItems; default;
     function Add(v: T2DLine): Integer; overload;
-    function Add(lb, le: T2DPoint): Integer; overload;
-    function Add(lb, le: T2DPoint; idx1, idx2: Integer; Poly: TPoly): Integer; overload;
+    function Add(lb, le: TVec2): Integer; overload;
+    function Add(lb, le: TVec2; idx1, idx2: Integer; Poly: TPoly): Integer; overload;
     function Count: Integer;
     procedure Clear;
-    procedure Delete(Index: Integer);
+    procedure Delete(index: Integer);
 
-    function NearLine(const ExpandDist: TGeoFloat; const pt: T2DPoint): P2DLine;
-    function FarLine(const ExpandDist: TGeoFloat; const pt: T2DPoint): P2DLine;
+    function NearLine(const ExpandDist: TGeoFloat; const pt: TVec2): P2DLine;
+    function FarLine(const ExpandDist: TGeoFloat; const pt: TVec2): P2DLine;
 
-    procedure SortOfNear(const pt: T2DPoint); overload;
-    procedure SortOfFar(const pt: T2DPoint); overload;
+    procedure SortOfNear(const pt: TVec2); overload;
+    procedure SortOfFar(const pt: TVec2); overload;
 
     property UserData: Pointer read FUserData write FUserData;
     property UserObject: TCoreClassObject read FUserObject write FUserObject;
@@ -520,7 +583,7 @@ type
   P2DCircle = ^T2DCircle;
 
   T2DCircle = packed record
-    Position: T2DPoint;
+    Position: TVec2;
     radius: TGeoFloat;
     UserData: TCoreClassObject;
   end;
@@ -528,7 +591,7 @@ type
   T2DCircleList = class(TCoreClassPersistent)
   private
     FList: TCoreClassList;
-    function GetItems(Index: Integer): P2DCircle;
+    function GetItems(index: Integer): P2DCircle;
   public
     constructor Create;
     destructor Destroy; override;
@@ -537,58 +600,60 @@ type
 
     property Items[index: Integer]: P2DCircle read GetItems; default;
     function Add(const v: T2DCircle): Integer; overload;
-    function Add(const Position: T2DPoint; const radius: TGeoFloat; const UserData: TCoreClassObject): Integer; overload;
+    function Add(const Position: TVec2; const radius: TGeoFloat; const UserData: TCoreClassObject): Integer; overload;
     function Count: Integer;
     procedure Clear;
-    procedure Delete(Index: Integer);
+    procedure Delete(index: Integer);
 
     procedure SortOfMinRadius;
     procedure SortOfMaxRadius;
   end;
 
-  T2DRectList = class(TCoreClassPersistent)
+  TRectV2List = class(TCoreClassPersistent)
   private
     FList: TCoreClassList;
-    function GetItems(Index: Integer): P2DRect;
+    function GetItems(index: Integer): PRectV2;
   public
     constructor Create;
     destructor Destroy; override;
 
     procedure Assign(Source: TCoreClassPersistent); override;
 
-    property Items[index: Integer]: P2DRect read GetItems; default;
-    function Add(const v: T2DRect): Integer; overload;
+    property Items[index: Integer]: PRectV2 read GetItems; default;
+    function Add(const v: TRectV2): Integer; overload;
     function Count: Integer;
     procedure Clear;
-    procedure Delete(Index: Integer);
+    procedure Delete(index: Integer);
   end;
 
-  TPolyRect = packed record
-    LeftTop: T2DPoint;
-    RightTop: T2DPoint;
-    RightBottom: T2DPoint;
-    LeftBottom: T2DPoint;
+  TV2Rect4 = packed record
+    LeftTop: TVec2;
+    RightTop: TVec2;
+    RightBottom: TVec2;
+    LeftBottom: TVec2;
   public
     function IsZero: Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-    function Rotation(angle: TGeoFloat): TPolyRect; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-    function Rotation(axis: T2DPoint; angle: TGeoFloat): TPolyRect; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-    function Add(v: T2DPoint): TPolyRect; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-    function Sub(v: T2DPoint): TPolyRect; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-    function Mul(v: T2DPoint): TPolyRect; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-    function MoveTo(Position: T2DPoint): TPolyRect; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-    function BoundRect: T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    function Rotation(angle: TGeoFloat): TV2Rect4; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    function Rotation(Axis: TVec2; angle: TGeoFloat): TV2Rect4; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    function Add(v: TVec2): TV2Rect4; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    function Sub(v: TVec2): TV2Rect4; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    function Mul(v: TVec2): TV2Rect4; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    function Mul(v: TGeoFloat): TV2Rect4; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    function FDiv(v: TVec2): TV2Rect4; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    function MoveTo(Position: TVec2): TV2Rect4; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    function BoundRect: TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF}
     function BoundRectf: TRectf; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-    function Centroid: T2DPoint; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-    class function Init(r: T2DRect; Ang: TGeoFloat): TPolyRect; overload; static; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-    class function Init(r: TRectf; Ang: TGeoFloat): TPolyRect; overload; static; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-    class function Init(r: TRect; Ang: TGeoFloat): TPolyRect; overload; static; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-    class function Init(CenPos: T2DPoint; width, height, Ang: TGeoFloat): TPolyRect; overload; static; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-    class function Init(width, height, Ang: TGeoFloat): TPolyRect; overload; static; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-    class function InitZero: TPolyRect; static;
+    function Centroid: TVec2; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    class function Init(R: TRectV2; Ang: TGeoFloat): TV2Rect4; overload; static; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    class function Init(R: TRectf; Ang: TGeoFloat): TV2Rect4; overload; static; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    class function Init(R: TRect; Ang: TGeoFloat): TV2Rect4; overload; static; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    class function Init(CenPos: TVec2; width, height, Ang: TGeoFloat): TV2Rect4; overload; static; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    class function Init(width, height, Ang: TGeoFloat): TV2Rect4; overload; static; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    class function InitZero: TV2Rect4; static;
   end;
 
   TRectPackData = packed record
-    rect: T2DRect;
+    Rect: TRectV2;
     error: Boolean;
     Data1: Pointer;
     Data2: TCoreClassObject;
@@ -600,7 +665,7 @@ type
   private
     FList: TCoreClassList;
     function Pack(width, height: TGeoFloat; var X, Y: TGeoFloat): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-    function GetItems(const Index: Integer): PRectPackData;
+    function GetItems(const index: Integer): PRectPackData;
   public
     MaxWidth, MaxHeight: TGeoFloat;
 
@@ -609,7 +674,8 @@ type
     procedure Clear;
     procedure Add(const X, Y, width, height: TGeoFloat); overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
     procedure Add(Data1: Pointer; Data2: TCoreClassObject; X, Y, width, height: TGeoFloat); overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-    procedure Add(Data1: Pointer; Data2: TCoreClassObject; r: T2DRect); overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    procedure Add(Data1: Pointer; Data2: TCoreClassObject; R: TRectV2); overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+    procedure Add(Data1: Pointer; Data2: TCoreClassObject; width, height: TGeoFloat); overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
     function Data1Exists(const Data1: Pointer): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
     function Data2Exists(const Data2: TCoreClassObject): Boolean; {$IFDEF INLINE_ASM} inline; {$ENDIF}
     function Count: Integer;
@@ -620,18 +686,16 @@ type
 
 implementation
 
-uses DataFrameEngine;
-
 const
   // Epsilon
   Epsilon  = 1.0E-12;
   Zero     = 0.0;
   PIDiv180 = 0.017453292519943295769236907684886;
 
-procedure T2DLine.SetLocation(const lb, le: T2DPoint);
+procedure T2DLine.SetLocation(const lb, le: TVec2);
 begin
-  Buff[0] := lb;
-  Buff[1] := le;
+  buff[0] := lb;
+  buff[1] := le;
 end;
 
 function T2DLine.ExpandPoly(ExpandDist: TGeoFloat): T2DLine;
@@ -639,42 +703,42 @@ begin
   Result := Self;
   if Poly <> nil then
     begin
-      Result.Buff[0] := Poly.Expands[PolyIndex[0], ExpandDist];
-      Result.Buff[1] := Poly.Expands[PolyIndex[1], ExpandDist];
+      Result.buff[0] := Poly.Expands[PolyIndex[0], ExpandDist];
+      Result.buff[1] := Poly.Expands[PolyIndex[1], ExpandDist];
     end;
 end;
 
-function T2DLine.Length: TGeoFloat;
+function T2DLine.length: TGeoFloat;
 begin
-  Result := PointDistance(Buff[0], Buff[1]);
+  Result := PointDistance(buff[0], buff[1]);
 end;
 
-function T2DLine.MinimumDistance(const pt: T2DPoint): TGeoFloat;
+function T2DLine.MinimumDistance(const pt: TVec2): TGeoFloat;
 begin
   Result := PointDistance(pt, ClosestPointFromLine(pt));
 end;
 
-function T2DLine.MinimumDistance(ExpandDist: TGeoFloat; const pt: T2DPoint): TGeoFloat;
+function T2DLine.MinimumDistance(ExpandDist: TGeoFloat; const pt: TVec2): TGeoFloat;
 begin
   Result := PointDistance(pt, ClosestPointFromLine(ExpandDist, pt));
 end;
 
-function T2DLine.ClosestPointFromLine(const pt: T2DPoint): T2DPoint;
+function T2DLine.ClosestPointFromLine(const pt: TVec2): TVec2;
 begin
-  Result := ClosestPointOnSegmentFromPoint(Buff[0], Buff[1], pt);
+  Result := ClosestPointOnSegmentFromPoint(buff[0], buff[1], pt);
 end;
 
-function T2DLine.ClosestPointFromLine(ExpandDist: TGeoFloat; const pt: T2DPoint): T2DPoint;
+function T2DLine.ClosestPointFromLine(ExpandDist: TGeoFloat; const pt: TVec2): TVec2;
 var
-  e: T2DLine;
+  E: T2DLine;
 begin
-  e := ExpandPoly(ExpandDist);
-  Result := ClosestPointOnSegmentFromPoint(e.Buff[0], e.Buff[1], pt);
+  E := ExpandPoly(ExpandDist);
+  Result := ClosestPointOnSegmentFromPoint(E.buff[0], E.buff[1], pt);
 end;
 
-function T2DLine.MiddlePoint: T2DPoint;
+function T2DLine.MiddlePoint: TVec2;
 begin
-  Result := MidPoint(Buff[0], Buff[1]);
+  Result := MiddleVec2(buff[0], buff[1]);
 end;
 
 {$IFDEF FPC}
@@ -697,7 +761,23 @@ end;
 {$ENDIF}
 
 
-function RangeValue(const v, minv, maxv: TGeoFloat): TGeoFloat;
+function fabs(const v: Single): Single;
+begin
+  if v < 0 then
+      Result := -v
+  else
+      Result := v;
+end;
+
+function fabs(const v: Double): Double;
+begin
+  if v < 0 then
+      Result := -v
+  else
+      Result := v;
+end;
+
+function Range(const v, minv, maxv: TGeoFloat): TGeoFloat;
 begin
   if v < minv then
       Result := minv
@@ -707,7 +787,7 @@ begin
       Result := v;
 end;
 
-function ClampValue(const v, minv, maxv: TGeoFloat): TGeoFloat;
+function Clamp(const v, minv, maxv: TGeoFloat): TGeoFloat;
 begin
   if v < minv then
       Result := minv
@@ -733,73 +813,121 @@ begin
       Result := v2;
 end;
 
-function MakePoint(const X, Y: TGeoFloat): T2DPoint;
+function MakeVec2(const X, Y: TGeoFloat): TVec2;
 begin
   Result[0] := X;
   Result[1] := Y;
 end;
 
-function MakePoint(const X, Y: Integer): T2DPoint;
+function MakeVec2(const X, Y: Integer): TVec2;
 begin
   Result[0] := X;
   Result[1] := Y;
 end;
 
-function Point2Point(const pt: T2DPoint): TPoint;
+function MakePoint(const X, Y: TGeoFloat): TVec2;
+begin
+  Result[0] := X;
+  Result[1] := Y;
+end;
+
+function MakePoint(const X, Y: Integer): TVec2;
+begin
+  Result[0] := X;
+  Result[1] := Y;
+end;
+
+function Point2Point(const pt: TVec2): TPoint;
 begin
   Result.X := Round(pt[0]);
   Result.Y := Round(pt[1]);
 end;
 
-function Point2Pointf(const pt: T2DPoint): TPointf;
+function Point2Pointf(const pt: TVec2): TPointf;
 begin
   Result.X := pt[0];
   Result.Y := pt[1];
 end;
 
-function PointMake(const X, Y: TGeoFloat): T2DPoint;
+function PointMake(const X, Y: TGeoFloat): TVec2;
 begin
   Result[0] := X;
   Result[1] := Y;
 end;
 
-function PointMake(const pt: TPoint): T2DPoint;
+function PointMake(const pt: TPoint): TVec2;
 begin
   Result[0] := pt.X;
   Result[1] := pt.Y;
 end;
 
-function PointMake(const pt: TPointf): T2DPoint;
+function PointMake(const pt: TPointf): TVec2;
 begin
   Result[0] := pt.X;
   Result[1] := pt.Y;
 end;
 
-function Make2DPoint(const X, Y: TGeoFloat): T2DPoint;
+function Make2DPoint(const X, Y: TGeoFloat): TVec2;
 begin
   Result[0] := X;
   Result[1] := Y;
 end;
 
-function Make2DPoint(const X, Y: Integer): T2DPoint;
+function Make2DPoint(const X, Y: Integer): TVec2;
 begin
   Result[0] := X;
   Result[1] := Y;
 end;
 
-function Make2DPoint(const pt: TPoint): T2DPoint;
+function Make2DPoint(const pt: TPoint): TVec2;
 begin
   Result[0] := pt.X;
   Result[1] := pt.Y;
 end;
 
-function Make2DPoint(const pt: TPointf): T2DPoint;
+function Make2DPoint(const pt: TPointf): TVec2;
 begin
   Result[0] := pt.X;
   Result[1] := pt.Y;
 end;
 
-function MakePointf(const pt: T2DPoint): TPointf;
+function vec2(const X, Y: TGeoFloat): TVec2;
+begin
+  Result[0] := X;
+  Result[1] := Y;
+end;
+
+function vec2(const X, Y: Integer): TVec2;
+begin
+  Result[0] := X;
+  Result[1] := Y;
+end;
+
+function vec2(const X, Y: Int64): TVec2;
+begin
+  Result[0] := X;
+  Result[1] := Y;
+end;
+
+function vec2(const pt: TPoint): TVec2;
+begin
+  Result[0] := pt.X;
+  Result[1] := pt.Y;
+end;
+
+function vec2(const pt: TPointf): TVec2;
+begin
+  Result[0] := pt.X;
+  Result[1] := pt.Y;
+end;
+
+function RoundVec2(const v: TVec2): TVec2;
+begin
+  Result[0] := Round(v[0]);
+  Result[1] := Round(v[1]);
+end;
+
+function MakePointf(const pt: TVec2): TPointf;
 begin
   Result.X := pt[0];
   Result.Y := pt[1];
@@ -810,17 +938,17 @@ begin
   Result := IsEqual(v, 0, Epsilon);
 end;
 
-function IsZero(const pt: T2DPoint): Boolean;
+function IsZero(const pt: TVec2): Boolean;
 begin
   Result := IsEqual(pt[0], 0, Epsilon) and IsEqual(pt[1], 0, Epsilon);
 end;
 
-function IsZero(const r: T2DRect): Boolean;
+function IsZero(const R: TRectV2): Boolean;
 begin
-  Result := IsZero(r[0]) and IsZero(r[1]);
+  Result := IsZero(R[0]) and IsZero(R[1]);
 end;
 
-function IsNan(const pt: T2DPoint): Boolean;
+function IsNan(const pt: TVec2): Boolean;
 begin
   Result := Math.IsNan(pt[0]) or Math.IsNan(pt[1]);
 end;
@@ -831,18 +959,20 @@ begin
 end;
 
 function HypotX(const X, Y: Extended): TGeoFloat;
-{ formula: Sqrt(X*X + Y*Y)
-  implemented as:  |Y|*Sqrt(1+Sqr(X/Y)), |X| < |Y| for greater precision }
+{
+  formula: Sqrt(X*X + Y*Y)
+  implemented as: |Y|*Sqrt(1+Sqr(X/Y)), |X| < |Y| for greater precision
+}
 var
-  temp, TempX, TempY: Extended;
+  Temp, TempX, TempY: Extended;
 begin
-  TempX := Abs(X);
-  TempY := Abs(Y);
+  TempX := fabs(X);
+  TempY := fabs(Y);
   if TempX > TempY then
     begin
-      temp := TempX;
+      Temp := TempX;
       TempX := TempY;
-      TempY := temp;
+      TempY := Temp;
     end;
   if TempX = 0 then
       Result := TempY
@@ -850,135 +980,147 @@ begin
       Result := TempY * Sqrt(1 + Sqr(TempX / TempY));
 end;
 
-function PointNorm(const v: T2DPoint): TGeoFloat;
+function PointNorm(const v: TVec2): TGeoFloat;
 begin
   Result := v[0] * v[0] + v[1] * v[1];
 end;
 
-function PointNegate(const v: T2DPoint): T2DPoint;
+function PointNegate(const v: TVec2): TVec2;
 begin
   Result[0] := -v[0];
   Result[1] := -v[1];
 end;
 
-procedure SetPoint(var v: T2DPoint; const vSrc: T2DPoint);
+function vec2Inv(const v: TVec2): TVec2;
+begin
+  Result[0] := v[1];
+  Result[1] := v[0];
+end;
+
+procedure SetVec2(var v: TVec2; const vSrc: TVec2);
 begin
   v[0] := vSrc[0];
   v[1] := vSrc[1];
 end;
 
-function PointAdd(const v1, v2: T2DPoint): T2DPoint;
+function Vec2Add(const v1, v2: TVec2): TVec2;
 begin
   Result[0] := v1[0] + v2[0];
   Result[1] := v1[1] + v2[1];
 end;
 
-function PointAdd(const v1: T2DPoint; v2: TGeoFloat): T2DPoint;
+function Vec2Add(const v1: TVec2; v2: TGeoFloat): TVec2;
 begin
   Result[0] := v1[0] + v2;
   Result[1] := v1[1] + v2;
 end;
 
-function PointAdd(const v1: T2DPoint; X, Y: TGeoFloat): T2DPoint;
+function Vec2Add(const v1: TVec2; X, Y: TGeoFloat): TVec2;
 begin
   Result[0] := v1[0] + X;
   Result[1] := v1[1] + Y;
 end;
 
-function PointSub(const v1, v2: T2DPoint): T2DPoint;
+function Vec2Sub(const v1, v2: TVec2): TVec2;
 begin
   Result[0] := v1[0] - v2[0];
   Result[1] := v1[1] - v2[1];
 end;
 
-function PointSub(const v1: T2DPoint; v2: TGeoFloat): T2DPoint;
+function Vec2Sub(const v1: TVec2; v2: TGeoFloat): TVec2;
 begin
   Result[0] := v1[0] - v2;
   Result[1] := v1[1] - v2;
 end;
 
-function PointMul(const v1, v2: T2DPoint): T2DPoint;
+function Vec2Mul(const v1, v2: TVec2): TVec2;
 begin
   Result[0] := v1[0] * v2[0];
   Result[1] := v1[1] * v2[1];
 end;
 
-function PointMul(const v1, v2: T2DPoint; const v3: TGeoFloat): T2DPoint;
+function Vec2Mul(const v1, v2: TVec2; const v3: TGeoFloat): TVec2;
 begin
   Result[0] := v1[0] * v2[0] * v3;
   Result[1] := v1[1] * v2[1] * v3;
 end;
 
-function PointMul(const v1, v2: T2DPoint; const v3, v4: TGeoFloat): T2DPoint;
+function Vec2Mul(const v1, v2: TVec2; const v3, v4: TGeoFloat): TVec2;
 begin
   Result[0] := v1[0] * v2[0] * v3 * v4;
   Result[1] := v1[1] * v2[1] * v3 * v4;
 end;
 
-function PointMul(const v1, v2, v3: T2DPoint): T2DPoint;
+function Vec2Mul(const v1, v2, v3: TVec2): TVec2;
 begin
   Result[0] := v1[0] * v2[0] * v3[0];
   Result[1] := v1[1] * v2[1] * v3[1];
 end;
 
-function PointMul(const v1, v2, v3, v4: T2DPoint): T2DPoint;
+function Vec2Mul(const v1, v2, v3, v4: TVec2): TVec2;
 begin
   Result[0] := v1[0] * v2[0] * v3[0] * v4[0];
   Result[1] := v1[1] * v2[1] * v3[1] * v4[1];
 end;
 
-function PointMul(const v1: T2DPoint; const v2: TGeoFloat): T2DPoint;
+function Vec2Mul(const v1: TVec2; const v2: TGeoFloat): TVec2;
 begin
   Result[0] := v1[0] * v2;
   Result[1] := v1[1] * v2;
 end;
 
-function PointMul(const v1: T2DPoint; const v2, v3: TGeoFloat): T2DPoint;
+function Vec2Mul(const v1: TVec2; const v2, v3: TGeoFloat): TVec2;
 begin
   Result[0] := v1[0] * v2 * v3;
   Result[1] := v1[1] * v2 * v3;
 end;
 
-function PointMul(const v1: T2DPoint; const v2, v3, v4: TGeoFloat): T2DPoint;
+function Vec2Mul(const v1: TVec2; const v2, v3, v4: TGeoFloat): TVec2;
 begin
   Result[0] := v1[0] * v2 * v3 * v4;
   Result[1] := v1[1] * v2 * v3 * v4;
 end;
 
-function PointDiv(const v1: T2DPoint; const v2: TGeoFloat): T2DPoint;
+function Vec2Div(const v1: TVec2; const v2: TGeoFloat): TVec2;
 begin
   Result[0] := v1[0] / v2;
   Result[1] := v1[1] / v2;
 end;
 
-function PointNormalize(const v: T2DPoint): T2DPoint;
+function Vec2Div(const v1, v2: TVec2): TVec2;
+begin
+  Result[0] := v1[0] / v2[0];
+  Result[1] := v1[1] / v2[1];
+end;
+
+function PointNormalize(const v: TVec2): TVec2;
 var
-  invLen: TGeoFloat;
-  vn    : TGeoFloat;
+  InvLen: TGeoFloat;
+  vn: TGeoFloat;
 begin
   vn := PointNorm(v);
   if vn = 0 then
-      SetPoint(Result, v)
+      SetVec2(Result, v)
   else
     begin
-      invLen := 1 / Sqrt(vn);
-      Result[0] := v[0] * invLen;
-      Result[1] := v[1] * invLen;
+      InvLen := 1 / Sqrt(vn);
+      Result[0] := v[0] * InvLen;
+      Result[1] := v[1] * InvLen;
     end;
 end;
 
-function PointLength(const v: T2DPoint): TGeoFloat;
+function PointLength(const v: TVec2): TGeoFloat;
 begin
   Result := Sqrt(PointNorm(v));
 end;
 
-procedure ScalePoint(var v: T2DPoint; factor: TGeoFloat);
+procedure PointScale(var v: TVec2; factor: TGeoFloat);
 begin
   v[0] := v[0] * factor;
   v[1] := v[1] * factor;
 end;
 
-function PointDotProduct(const v1, v2: T2DPoint): TGeoFloat;
+function PointDotProduct(const v1, v2: TVec2): TGeoFloat;
 begin
   Result := v1[0] * v2[0] + v1[1] * v2[1];
 end;
@@ -998,35 +1140,37 @@ begin
   Result := Sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
 end;
 
-function PointDistance(const v1, v2: T2DPoint): TGeoFloat;
+function PointDistance(const v1, v2: TVec2): TGeoFloat;
 begin
   Result := Sqrt((v2[0] - v1[0]) * (v2[0] - v1[0]) + (v2[1] - v1[1]) * (v2[1] - v1[1]));
 end;
 
-function PointLayDistance(const v1, v2: T2DPoint): TGeoFloat;
+function Vec2Distance(const v1, v2: TVec2): TGeoFloat;
+begin
+  Result := Sqrt((v2[0] - v1[0]) * (v2[0] - v1[0]) + (v2[1] - v1[1]) * (v2[1] - v1[1]));
+end;
+
+function PointLayDistance(const v1, v2: TVec2): TGeoFloat;
 begin
   Result := Pow(v2[0] - v1[0]) + Pow(v2[1] - v1[1]);
 end;
 
-function SqrDistance(const v1, v2: T2DPoint): TGeoFloat;
+function SqrDistance(const v1, v2: TVec2): TGeoFloat;
 begin
   Result := Sqr(v2[0] - v1[0]) + Sqr(v2[1] - v1[1]);
 end;
 
-function PointLerp(const v1, v2: T2DPoint; t: TGeoFloat): T2DPoint;
-const
-  X = 0;
-  Y = 1;
+function PointLerp(const v1, v2: TVec2; T: TGeoFloat): TVec2;
 begin
-  Result[X] := v1[X] + (v2[X] - v1[X]) * t;
-  Result[Y] := v1[Y] + (v2[Y] - v1[Y]) * t;
+  Result[0] := v1[0] + (v2[0] - v1[0]) * T;
+  Result[1] := v1[1] + (v2[1] - v1[1]) * T;
 end;
 
-function PointLerpTo(const sour, dest: T2DPoint; const d: TGeoFloat): T2DPoint;
+function PointLerpTo(const sour, dest: TVec2; const d: TGeoFloat): TVec2;
 var
   dx: TGeoFloat;
   dy: TGeoFloat;
-  k : Double;
+  k: Double;
 begin
   dx := dest[0] - sour[0];
   dy := dest[1] - sour[1];
@@ -1042,9 +1186,35 @@ begin
     end;
 end;
 
-procedure SwapPoint(var v1, v2: T2DPoint);
+function Vec2Lerp(const v1, v2: TVec2; T: TGeoFloat): TVec2;
+begin
+  Result[0] := v1[0] + (v2[0] - v1[0]) * T;
+  Result[1] := v1[1] + (v2[1] - v1[1]) * T;
+end;
+
+function Vec2LerpTo(const sour, dest: TVec2; const d: TGeoFloat): TVec2;
 var
-  v: T2DPoint;
+  dx: TGeoFloat;
+  dy: TGeoFloat;
+  k: Double;
+begin
+  dx := dest[0] - sour[0];
+  dy := dest[1] - sour[1];
+  if ((dx <> 0) or (dy <> 0)) and (d <> 0) then
+    begin
+      k := d / Sqrt(dx * dx + dy * dy);
+      Result[0] := sour[0] + k * dx;
+      Result[1] := sour[1] + k * dy;
+    end
+  else
+    begin
+      Result := sour;
+    end;
+end;
+
+procedure SwapPoint(var v1, v2: TVec2);
+var
+  v: TVec2;
 begin
   v := v1;
   v1 := v2;
@@ -1056,7 +1226,12 @@ begin
   Result := v * v;
 end;
 
-function MidPoint(const pt1, pt2: T2DPoint): T2DPoint;
+function Pow(const v, n: TGeoFloat): TGeoFloat;
+begin
+  Result := Math.Power(v, n);
+end;
+
+function MiddleVec2(const pt1, pt2: TVec2): TVec2;
 begin
   Result[0] := (pt1[0] + pt2[0]) * 0.5;
   Result[1] := (pt1[1] + pt2[1]) * 0.5;
@@ -1067,7 +1242,7 @@ var
   Diff: TGeoFloat;
 begin
   Diff := Val1 - Val2;
-  Assert(((-Epsilon <= Diff) and (Diff <= Epsilon)) = (Abs(Diff) <= Epsilon), 'Error - Illogical error in equality check. (IsEqual)');
+  Assert(((-Epsilon <= Diff) and (Diff <= Epsilon)) = (fabs(Diff) <= Epsilon), 'Error - Illogical error in equality Detect. (IsEqual)');
   Result := ((-Epsilon <= Diff) and (Diff <= Epsilon));
 end;
 
@@ -1076,17 +1251,17 @@ begin
   Result := IsEqual(Val1, Val2, Epsilon);
 end;
 
-function IsEqual(const Val1, Val2: T2DPoint): Boolean;
+function IsEqual(const Val1, Val2: TVec2): Boolean;
 begin
   Result := IsEqual(Val1[0], Val2[0]) and IsEqual(Val1[1], Val2[1]);
 end;
 
-function IsEqual(const Val1, Val2: T2DPoint; Epsilon: TGeoFloat): Boolean;
+function IsEqual(const Val1, Val2: TVec2; Epsilon: TGeoFloat): Boolean;
 begin
   Result := IsEqual(Val1[0], Val2[0], Epsilon) and IsEqual(Val1[1], Val2[1], Epsilon);
 end;
 
-function IsEqual(const Val1, Val2: T2DRect): Boolean;
+function IsEqual(const Val1, Val2: TRectV2): Boolean;
 begin
   Result := IsEqual(Val1[0], Val2[0]) and IsEqual(Val1[1], Val2[1]);
 end;
@@ -1096,7 +1271,7 @@ var
   Diff: TGeoFloat;
 begin
   Diff := Val1 - Val2;
-  Assert(((-Epsilon > Diff) or (Diff > Epsilon)) = (Abs(Val1 - Val2) > Epsilon), 'Error - Illogical error in equality check. (NotEqual)');
+  Assert(((-Epsilon > Diff) or (Diff > Epsilon)) = (fabs(Val1 - Val2) > Epsilon), 'Error - Illogical error in equality Detect. (NotEqual)');
   Result := ((-Epsilon > Diff) or (Diff > Epsilon));
 end;
 
@@ -1105,7 +1280,7 @@ begin
   Result := NotEqual(Val1, Val2, Epsilon);
 end;
 
-function NotEqual(const Val1, Val2: T2DPoint): Boolean;
+function NotEqual(const Val1, Val2: TVec2): Boolean;
 begin
   Result := NotEqual(Val1[0], Val2[0]) or NotEqual(Val1[1], Val2[1]);
 end;
@@ -1120,20 +1295,20 @@ begin
   Result := (Val1 > Val2) or IsEqual(Val1, Val2);
 end;
 
-function GetEquilateralTriangleCen(pt1, pt2: T2DPoint): T2DPoint;
+function GetEquilateralTriangleCen(pt1, pt2: TVec2): TVec2;
 const
   Sin60: TGeoFloat = 0.86602540378443864676372317075294;
   Cos60: TGeoFloat = 0.50000000000000000000000000000000;
 var
-  b, e, pt: T2DPoint;
+  b, E, pt: TVec2;
 begin
   b := pt1;
-  e := pt2;
-  e[0] := e[0] - b[0];
-  e[1] := e[1] - b[1];
-  pt[0] := ((e[0] * Cos60) - (e[1] * Sin60)) + b[0];
-  pt[1] := ((e[1] * Cos60) + (e[0] * Sin60)) + b[1];
-  Assert(Intersect(pt1, MidPoint(pt2, pt), pt2, MidPoint(pt1, pt), Result));
+  E := pt2;
+  E[0] := E[0] - b[0];
+  E[1] := E[1] - b[1];
+  pt[0] := ((E[0] * Cos60) - (E[1] * Sin60)) + b[0];
+  pt[1] := ((E[1] * Cos60) + (E[0] * Sin60)) + b[1];
+  Assert(Intersect(pt1, MiddleVec2(pt2, pt), pt2, MiddleVec2(pt1, pt), Result));
 end;
 
 procedure Rotate(RotAng: TGeoFloat; const X, Y: TGeoFloat; out Nx, Ny: TGeoFloat);
@@ -1148,7 +1323,7 @@ begin
   Ny := (Y * CosVal) + (X * SinVal);
 end;
 
-function Rotate(const RotAng: TGeoFloat; const Point: T2DPoint): T2DPoint;
+function Rotate(const RotAng: TGeoFloat; const Point: TVec2): TVec2;
 begin
   Rotate(RotAng, Point[0], Point[1], Result[0], Result[1]);
 end;
@@ -1162,43 +1337,43 @@ begin
       Result := Result + 360;
 end;
 
-function PointAngle(const axis, pt: T2DPoint): TGeoFloat;
+function PointAngle(const Axis, pt: TVec2): TGeoFloat;
 begin
-  Result := NormalizeDegAngle(RadToDeg(ArcTan2(axis[1] - pt[1], axis[0] - pt[0])));
+  Result := NormalizeDegAngle(RadToDeg(ArcTan2(Axis[1] - pt[1], Axis[0] - pt[0])));
 end;
 
-function PointAngle(const pt: T2DPoint): TGeoFloat;
+function PointAngle(const pt: TVec2): TGeoFloat;
 begin
   Result := PointAngle(NULLPoint, pt);
 end;
 
-function AngleDistance(const s, a: TGeoFloat): TGeoFloat;
+function AngleDistance(const s, A: TGeoFloat): TGeoFloat;
 begin
-  Result := Abs(s - a);
+  Result := fabs(s - A);
   if Result > 180 then
       Result := 360 - Result;
 end;
 
-function PointRotation(const axis: T2DPoint; const Dist, angle: TGeoFloat): T2DPoint;
+function PointRotation(const Axis: TVec2; const Dist, angle: TGeoFloat): TVec2;
 begin
-  Result[0] := axis[0] - (Cos(DegToRad(angle)) * Dist);
-  Result[1] := axis[1] - (Sin(DegToRad(angle)) * Dist);
+  Result[0] := Axis[0] - (Cos(DegToRad(angle)) * Dist);
+  Result[1] := Axis[1] - (Sin(DegToRad(angle)) * Dist);
 end;
 
-function PointRotation(const axis, pt: T2DPoint; const angle: TGeoFloat): T2DPoint;
+function PointRotation(const Axis, pt: TVec2; const angle: TGeoFloat): TVec2;
 begin
-  Result := PointRotation(axis, PointDistance(axis, pt), angle);
+  Result := PointRotation(Axis, PointDistance(Axis, pt), angle);
 end;
 
-function CircleInCircle(const cp1, cp2: T2DPoint; const r1, r2: TGeoFloat): Boolean;
+function CircleInCircle(const cp1, cp2: TVec2; const r1, r2: TGeoFloat): Boolean;
 begin
   Result := (r2 - (PointDistance(cp1, cp2) + r1) >= Zero);
 end;
 
-function CircleInRect(const cp: T2DPoint; const radius: TGeoFloat; r: T2DRect): Boolean;
+function CircleInRect(const cp: TVec2; const radius: TGeoFloat; R: TRectV2): Boolean;
 begin
-  FixRect(r[0][0], r[0][1], r[1][0], r[1][1]);
-  Result := PointInRect(cp, MakeRect(PointSub(r[0], radius), PointAdd(r[1], radius)));
+  FixRect(R[0][0], R[0][1], R[1][0], R[1][1]);
+  Result := PointInRect(cp, MakeRect(Vec2Sub(R[0], radius), Vec2Add(R[1], radius)));
 end;
 
 function PointInRect(const Px, Py: TGeoFloat; const x1, y1, x2, y2: TGeoFloat): Boolean;
@@ -1211,14 +1386,14 @@ begin
   Result := ((x1 <= Px) and (Px <= x2) and (y1 <= Py) and (Py <= y2)) or ((x2 <= Px) and (Px <= x1) and (y2 <= Py) and (Py <= y1));
 end;
 
-function PointInRect(const pt: T2DPoint; const r: T2DRect): Boolean;
+function PointInRect(const pt: TVec2; const R: TRectV2): Boolean;
 begin
-  Result := PointInRect(pt[0], pt[1], r[0][0], r[0][1], r[1][0], r[1][1]);
+  Result := PointInRect(pt[0], pt[1], R[0][0], R[0][1], R[1][0], R[1][1]);
 end;
 
-function PointInRect(const Px, Py: TGeoFloat; const r: T2DRect): Boolean;
+function PointInRect(const Px, Py: TGeoFloat; const R: TRectV2): Boolean;
 begin
-  Result := PointInRect(Px, Py, r[0][0], r[0][1], r[1][0], r[1][1]);
+  Result := PointInRect(Px, Py, R[0][0], R[0][1], R[1][0], R[1][1]);
 end;
 
 function RectToRectIntersect(const x1, y1, x2, y2, x3, y3, x4, y4: TGeoFloat): Boolean;
@@ -1231,7 +1406,7 @@ begin
   Result := (x1 <= x4) and (x2 >= x3) and (y1 <= y4) and (y2 >= y3);
 end;
 
-function RectToRectIntersect(const r1, r2: T2DRect): Boolean;
+function RectToRectIntersect(const r1, r2: TRectV2): Boolean;
 begin
   Result := RectToRectIntersect(r1[0][0], r1[0][1], r1[1][0], r1[1][1], r2[0][0], r2[0][1], r2[1][0], r2[1][1]);
 end;
@@ -1256,7 +1431,7 @@ begin
   Result := PointInRect(x1, y1, x3, y3, x4, y4) and PointInRect(x2, y2, x3, y3, x4, y4);
 end;
 
-function RectWithinRect(const r1, r2: T2DRect): Boolean;
+function RectWithinRect(const r1, r2: TRectV2): Boolean;
 begin
   Result := RectWithinRect(r1[0][0], r1[0][1], r1[1][0], r1[1][1], r2[0][0], r2[0][1], r2[1][0], r2[1][1]);
 end;
@@ -1266,7 +1441,7 @@ begin
   Result := RectWithinRect(r1.Left, r1.Top, r1.Right, r1.Bottom, r2.Left, r2.Top, r2.Right, r2.Bottom);
 end;
 
-function Make2DRect(const X, Y, radius: TGeoFloat): T2DRect;
+function MakeRectV2(const X, Y, radius: TGeoFloat): TRectV2;
 begin
   Result[0][0] := X - radius;
   Result[0][1] := Y - radius;
@@ -1274,7 +1449,7 @@ begin
   Result[1][1] := Y + radius;
 end;
 
-function Make2DRect(const x1, y1, x2, y2: TGeoFloat): T2DRect;
+function MakeRectV2(const x1, y1, x2, y2: TGeoFloat): TRectV2;
 begin
   Result[0][0] := x1;
   Result[0][1] := y1;
@@ -1282,89 +1457,35 @@ begin
   Result[1][1] := y2;
 end;
 
-function Make2DRect(const p1, p2: T2DPoint): T2DRect;
+function MakeRectV2(const p1, p2: TVec2): TRectV2;
 begin
   Result[0] := p1;
   Result[1] := p2;
 end;
 
-function Make2DRect(const X, Y: TGeoFloat; const p2: T2DPoint): T2DRect;
+function MakeRectV2(const X, Y: TGeoFloat; const p2: TVec2): TRectV2;
 begin
   Result[0] := PointMake(X, Y);
   Result[1] := p2;
 end;
 
-function Make2DRect(const r: TRect): T2DRect;
+function MakeRectV2(const R: TRect): TRectV2;
 begin
-  Result[0][0] := r.Left;
-  Result[0][1] := r.Top;
-  Result[1][0] := r.Right;
-  Result[1][1] := r.Bottom;
+  Result[0][0] := R.Left;
+  Result[0][1] := R.Top;
+  Result[1][0] := R.Right;
+  Result[1][1] := R.Bottom;
 end;
 
-function Make2DRect(const r: TRectf): T2DRect;
+function MakeRectV2(const R: TRectf): TRectV2;
 begin
-  Result[0][0] := r.Left;
-  Result[0][1] := r.Top;
-  Result[1][0] := r.Right;
-  Result[1][1] := r.Bottom;
+  Result[0][0] := R.Left;
+  Result[0][1] := R.Top;
+  Result[1][0] := R.Right;
+  Result[1][1] := R.Bottom;
 end;
 
-function MakeRect(const X, Y, radius: TGeoFloat): T2DRect;
-begin
-  Result[0][0] := X - radius;
-  Result[0][1] := Y - radius;
-  Result[1][0] := X + radius;
-  Result[1][1] := Y + radius;
-end;
-
-function MakeRect(const x1, y1, x2, y2: TGeoFloat): T2DRect;
-begin
-  Result[0][0] := x1;
-  Result[0][1] := y1;
-  Result[1][0] := x2;
-  Result[1][1] := y2;
-end;
-
-function MakeRect(const p1, p2: T2DPoint): T2DRect;
-begin
-  Result[0] := p1;
-  Result[1] := p2;
-end;
-
-function MakeRect(const r: TRect): T2DRect;
-begin
-  Result[0][0] := r.Left;
-  Result[0][1] := r.Top;
-  Result[1][0] := r.Right;
-  Result[1][1] := r.Bottom;
-end;
-
-function MakeRect(const r: TRectf): T2DRect;
-begin
-  Result[0][0] := r.Left;
-  Result[0][1] := r.Top;
-  Result[1][0] := r.Right;
-  Result[1][1] := r.Bottom;
-end;
-
-function Rect2Rect(const r: T2DRect): TRect;
-begin
-  Result.Left := Trunc(r[0][0]);
-  Result.Top := Trunc(r[0][1]);
-  Result.Right := Trunc(r[1][0]);
-  Result.Bottom := Trunc(r[1][1]);
-end;
-
-function Rect2Rect(const r: TRect): T2DRect;
-begin
-  Result[0][0] := r.Left;
-  Result[0][1] := r.Top;
-  Result[1][0] := r.Right;
-  Result[1][1] := r.Bottom;
-end;
-
-function RectMake(const X, Y, radius: TGeoFloat): T2DRect;
+function RectV2(const X, Y, radius: TGeoFloat): TRectV2;
 begin
   Result[0][0] := X - radius;
   Result[0][1] := Y - radius;
@@ -1372,7 +1493,7 @@ begin
   Result[1][1] := Y + radius;
 end;
 
-function RectMake(const x1, y1, x2, y2: TGeoFloat): T2DRect;
+function RectV2(const x1, y1, x2, y2: TGeoFloat): TRectV2;
 begin
   Result[0][0] := x1;
   Result[0][1] := y1;
@@ -1380,99 +1501,197 @@ begin
   Result[1][1] := y2;
 end;
 
-function RectMake(const p1, p2: T2DPoint): T2DRect;
+function RectV2(const p1, p2: TVec2): TRectV2;
 begin
   Result[0] := p1;
   Result[1] := p2;
 end;
 
-function RectMake(const r: TRect): T2DRect;
+function RectV2(const X, Y: TGeoFloat; const p2: TVec2): TRectV2;
 begin
-  Result[0][0] := r.Left;
-  Result[0][1] := r.Top;
-  Result[1][0] := r.Right;
-  Result[1][1] := r.Bottom;
+  Result[0] := PointMake(X, Y);
+  Result[1] := p2;
 end;
 
-function RectMake(const r: TRectf): T2DRect;
+function RectV2(const R: TRect): TRectV2;
 begin
-  Result[0][0] := r.Left;
-  Result[0][1] := r.Top;
-  Result[1][0] := r.Right;
-  Result[1][1] := r.Bottom;
+  Result[0][0] := R.Left;
+  Result[0][1] := R.Top;
+  Result[1][0] := R.Right;
+  Result[1][1] := R.Bottom;
 end;
 
-function RectAdd(const r: T2DRect; pt: T2DPoint): T2DRect;
+function RectV2(const R: TRectf): TRectV2;
 begin
-  Result[0] := PointAdd(r[0], pt);
-  Result[1] := PointAdd(r[1], pt);
+  Result[0][0] := R.Left;
+  Result[0][1] := R.Top;
+  Result[1][0] := R.Right;
+  Result[1][1] := R.Bottom;
 end;
 
-function RectAdd(const r1, r2: T2DRect): T2DRect;
+function MakeRect(const X, Y, radius: TGeoFloat): TRectV2;
 begin
-  Result[0] := PointAdd(r1[0], r2[0]);
-  Result[1] := PointAdd(r1[1], r2[1]);
+  Result[0][0] := X - radius;
+  Result[0][1] := Y - radius;
+  Result[1][0] := X + radius;
+  Result[1][1] := Y + radius;
 end;
 
-function RectSub(const r1, r2: T2DRect): T2DRect;
+function MakeRect(const x1, y1, x2, y2: TGeoFloat): TRectV2;
 begin
-  Result[0] := PointSub(r1[0], r2[0]);
-  Result[1] := PointSub(r1[1], r2[1]);
+  Result[0][0] := x1;
+  Result[0][1] := y1;
+  Result[1][0] := x2;
+  Result[1][1] := y2;
 end;
 
-function RectMul(const r1, r2: T2DRect): T2DRect;
+function MakeRect(const p1, p2: TVec2): TRectV2;
 begin
-  Result[0] := PointMul(r1[0], r2[0]);
-  Result[1] := PointMul(r1[1], r2[1]);
+  Result[0] := p1;
+  Result[1] := p2;
 end;
 
-function RectMul(const r1: T2DRect; r2: TGeoFloat): T2DRect;
+function MakeRect(const R: TRect): TRectV2;
 begin
-  Result[0] := PointMul(r1[0], r2);
-  Result[1] := PointMul(r1[1], r2);
+  Result[0][0] := R.Left;
+  Result[0][1] := R.Top;
+  Result[1][0] := R.Right;
+  Result[1][1] := R.Bottom;
 end;
 
-function RectOffset(const r: T2DRect; offset: T2DPoint): T2DRect;
+function MakeRect(const R: TRectf): TRectV2;
 begin
-  Result[0] := PointAdd(r[0], offset);
-  Result[1] := PointAdd(r[1], offset);
+  Result[0][0] := R.Left;
+  Result[0][1] := R.Top;
+  Result[1][0] := R.Right;
+  Result[1][1] := R.Bottom;
 end;
 
-function RectSizeLerp(const r: T2DRect; const rSizeLerp: TGeoFloat): T2DRect;
+function Rect2Rect(const R: TRectV2): TRect;
 begin
-  Result[0] := r[0];
-  Result[1] := PointLerp(r[0], r[1], rSizeLerp);
+  Result.Left := Trunc(R[0][0]);
+  Result.Top := Trunc(R[0][1]);
+  Result.Right := Trunc(R[1][0]);
+  Result.Bottom := Trunc(R[1][1]);
 end;
 
-function RectCenScale(const r: T2DRect; const rSizeScale: TGeoFloat): T2DRect;
+function Rect2Rect(const R: TRect): TRectV2;
+begin
+  Result[0][0] := R.Left;
+  Result[0][1] := R.Top;
+  Result[1][0] := R.Right;
+  Result[1][1] := R.Bottom;
+end;
+
+function RectMake(const X, Y, radius: TGeoFloat): TRectV2;
+begin
+  Result[0][0] := X - radius;
+  Result[0][1] := Y - radius;
+  Result[1][0] := X + radius;
+  Result[1][1] := Y + radius;
+end;
+
+function RectMake(const x1, y1, x2, y2: TGeoFloat): TRectV2;
+begin
+  Result[0][0] := x1;
+  Result[0][1] := y1;
+  Result[1][0] := x2;
+  Result[1][1] := y2;
+end;
+
+function RectMake(const p1, p2: TVec2): TRectV2;
+begin
+  Result[0] := p1;
+  Result[1] := p2;
+end;
+
+function RectMake(const R: TRect): TRectV2;
+begin
+  Result[0][0] := R.Left;
+  Result[0][1] := R.Top;
+  Result[1][0] := R.Right;
+  Result[1][1] := R.Bottom;
+end;
+
+function RectMake(const R: TRectf): TRectV2;
+begin
+  Result[0][0] := R.Left;
+  Result[0][1] := R.Top;
+  Result[1][0] := R.Right;
+  Result[1][1] := R.Bottom;
+end;
+
+function RectAdd(const R: TRectV2; pt: TVec2): TRectV2;
+begin
+  Result[0] := Vec2Add(R[0], pt);
+  Result[1] := Vec2Add(R[1], pt);
+end;
+
+function RectAdd(const r1, r2: TRectV2): TRectV2;
+begin
+  Result[0] := Vec2Add(r1[0], r2[0]);
+  Result[1] := Vec2Add(r1[1], r2[1]);
+end;
+
+function RectSub(const r1, r2: TRectV2): TRectV2;
+begin
+  Result[0] := Vec2Sub(r1[0], r2[0]);
+  Result[1] := Vec2Sub(r1[1], r2[1]);
+end;
+
+function RectMul(const r1, r2: TRectV2): TRectV2;
+begin
+  Result[0] := Vec2Mul(r1[0], r2[0]);
+  Result[1] := Vec2Mul(r1[1], r2[1]);
+end;
+
+function RectMul(const r1: TRectV2; r2: TGeoFloat): TRectV2;
+begin
+  Result[0] := Vec2Mul(r1[0], r2);
+  Result[1] := Vec2Mul(r1[1], r2);
+end;
+
+function RectOffset(const R: TRectV2; Offset: TVec2): TRectV2;
+begin
+  Result[0] := Vec2Add(R[0], Offset);
+  Result[1] := Vec2Add(R[1], Offset);
+end;
+
+function RectSizeLerp(const R: TRectV2; const rSizeLerp: TGeoFloat): TRectV2;
+begin
+  Result[0] := R[0];
+  Result[1] := PointLerp(R[0], R[1], rSizeLerp);
+end;
+
+function RectCenScale(const R: TRectV2; const rSizeScale: TGeoFloat): TRectV2;
 var
-  cen, siz: T2DPoint;
+  cen, siz: TVec2;
 begin
-  cen := PointLerp(r[0], r[1], 0.5);
-  siz := PointMul(RectSize(r), rSizeScale);
-  Result[0] := PointSub(cen, PointMul(siz, 0.5));
-  Result[1] := PointAdd(cen, PointMul(siz, 0.5));
+  cen := PointLerp(R[0], R[1], 0.5);
+  siz := Vec2Mul(RectSize(R), rSizeScale);
+  Result[0] := Vec2Sub(cen, Vec2Mul(siz, 0.5));
+  Result[1] := Vec2Add(cen, Vec2Mul(siz, 0.5));
 end;
 
-function RectEndge(const r: T2DRect; const endge: TGeoFloat): T2DRect;
+function RectEndge(const R: TRectV2; const endge: TGeoFloat): TRectV2;
 begin
-  Result[0][0] := r[0][0] - endge;
-  Result[0][1] := r[0][1] - endge;
-  Result[1][0] := r[1][0] + endge;
-  Result[1][1] := r[1][1] + endge;
+  Result[0][0] := R[0][0] - endge;
+  Result[0][1] := R[0][1] - endge;
+  Result[1][0] := R[1][0] + endge;
+  Result[1][1] := R[1][1] + endge;
 end;
 
-function RectEndge(const r: T2DRect; const endge: T2DPoint): T2DRect; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
+function RectEndge(const R: TRectV2; const endge: TVec2): TRectV2; {$IFDEF INLINE_ASM} inline; {$ENDIF} overload;
 begin
-  Result[0][0] := r[0][0] - endge[0];
-  Result[0][1] := r[0][1] - endge[1];
-  Result[1][0] := r[1][0] + endge[0];
-  Result[1][1] := r[1][1] + endge[1];
+  Result[0][0] := R[0][0] - endge[0];
+  Result[0][1] := R[0][1] - endge[1];
+  Result[1][0] := R[1][0] + endge[0];
+  Result[1][1] := R[1][1] + endge[1];
 end;
 
-function RectCentre(const r: T2DRect): T2DPoint;
+function RectCentre(const R: TRectV2): TVec2;
 begin
-  Result := PointLerp(r[0], r[1], 0.5);
+  Result := PointLerp(R[0], R[1], 0.5);
 end;
 
 procedure FixRect(var Left, Top, Right, Bottom: Integer);
@@ -1509,69 +1728,69 @@ begin
       Swap(Right, Left);
 end;
 
-function FixRect(r: T2DRect): T2DRect;
+function FixRect(R: TRectV2): TRectV2;
 begin
-  Result := r;
+  Result := R;
   FixRect(Result[0][0], Result[0][1], Result[1][0], Result[1][1]);
 end;
 
-function FixRect(r: TRect): TRect;
+function FixRect(R: TRect): TRect;
 begin
-  Result := r;
+  Result := R;
   FixRect(Result.Left, Result.Top, Result.Right, Result.Bottom);
 end;
 
-function MakeRect(const r: T2DRect): TRect;
+function MakeRect(const R: TRectV2): TRect;
 begin
-  Result.Left := Round(r[0][0]);
-  Result.Top := Round(r[0][1]);
-  Result.Right := Round(r[1][0]);
-  Result.Bottom := Round(r[1][1]);
+  Result.Left := Round(R[0][0]);
+  Result.Top := Round(R[0][1]);
+  Result.Right := Round(R[1][0]);
+  Result.Bottom := Round(R[1][1]);
 end;
 
-function MakeRectf(const r: T2DRect): TRectf;
+function MakeRectf(const R: TRectV2): TRectf;
 begin
-  Result.Left := r[0][0];
-  Result.Top := r[0][1];
-  Result.Right := r[1][0];
-  Result.Bottom := r[1][1];
+  Result.Left := R[0][0];
+  Result.Top := R[0][1];
+  Result.Right := R[1][0];
+  Result.Bottom := R[1][1];
 end;
 
-function RectWidth(const r: T2DRect): TGeoFloat;
+function RectWidth(const R: TRectV2): TGeoFloat;
 begin
-  if r[1][0] > r[0][0] then
-      Result := r[1][0] - r[0][0]
+  if R[1][0] > R[0][0] then
+      Result := R[1][0] - R[0][0]
   else
-      Result := r[0][0] - r[1][0];
+      Result := R[0][0] - R[1][0];
 end;
 
-function RectHeight(const r: T2DRect): TGeoFloat;
+function RectHeight(const R: TRectV2): TGeoFloat;
 begin
-  if r[1][1] > r[0][1] then
-      Result := r[1][1] - r[0][1]
+  if R[1][1] > R[0][1] then
+      Result := R[1][1] - R[0][1]
   else
-      Result := r[0][1] - r[1][1];
+      Result := R[0][1] - R[1][1];
 end;
 
-function RectArea(const r: T2DRect): TGeoFloat;
+function RectArea(const R: TRectV2): TGeoFloat;
 begin
-  Result := RectWidth(r) * RectHeight(r);
+  Result := RectWidth(R) * RectHeight(R);
 end;
 
-function RectSize(const r: T2DRect): T2DPoint;
+function RectSize(const R: TRectV2): TVec2;
 var
-  n: T2DRect;
+  n: TRectV2;
 begin
-  n := FixRect(r);
-  Result := PointSub(n[1], n[0]);
+  n := FixRect(R);
+  Result := Vec2Sub(n[1], n[0]);
 end;
 
-function RectFit(const r, b: T2DRect): T2DRect;
+function RectFit(const R, b: TRectV2): TRectV2;
 var
-  k              : TGeoFloat;
-  rs, bs, siz, pt: T2DPoint;
+  k: TGeoFloat;
+  rs, bs, siz, pt: TVec2;
 begin
-  rs := RectSize(r);
+  rs := RectSize(R);
   bs := RectSize(b);
 
   if (rs[0] / bs[0]) > (rs[1] / bs[1]) then
@@ -1579,96 +1798,87 @@ begin
   else
       k := rs[1] / bs[1];
 
-  siz := PointDiv(rs, k);
-  pt := PointMul(PointSub(bs, siz), 0.5);
-  Result[0] := PointAdd(b[0], pt);
-  Result[1] := PointAdd(Result[0], siz);
+  siz := Vec2Div(rs, k);
+  pt := Vec2Mul(Vec2Sub(bs, siz), 0.5);
+  Result[0] := Vec2Add(b[0], pt);
+  Result[1] := Vec2Add(Result[0], siz);
 end;
 
-function RectFit(const width, height: TGeoFloat; const b: T2DRect): T2DRect;
+function RectFit(const width, height: TGeoFloat; const b: TRectV2): TRectV2;
 begin
-  Result := RectFit(Make2DRect(0, 0, width, height), b);
+  Result := RectFit(MakeRectV2(0, 0, width, height), b);
 end;
 
-function BoundRect(const Buff: TArray2DPoint): T2DRect;
+function BoundRect(const buff: TArrayVec2): TRectV2;
 var
-  t   : T2DPoint;
+  T: TVec2;
   MaxX: TGeoFloat;
   MaxY: TGeoFloat;
   MinX: TGeoFloat;
   MinY: TGeoFloat;
-  i   : Integer;
+  i: Integer;
 begin
-  Result := Make2DRect(Zero, Zero, Zero, Zero);
-  if Length(Buff) < 2 then
+  Result := MakeRectV2(Zero, Zero, Zero, Zero);
+  if length(buff) < 2 then
       Exit;
-  t := Buff[0];
-  MinX := t[0];
-  MaxX := t[0];
-  MinY := t[1];
-  MaxY := t[1];
+  T := buff[0];
+  MinX := T[0];
+  MaxX := T[0];
+  MinY := T[1];
+  MaxY := T[1];
 
-  for i := 1 to Length(Buff) - 1 do
+  for i := 1 to length(buff) - 1 do
     begin
-      t := Buff[i];
-      if t[0] < MinX then
-          MinX := t[0]
-      else if t[0] > MaxX then
-          MaxX := t[0];
-      if t[1] < MinY then
-          MinY := t[1]
-      else if t[1] > MaxY then
-          MaxY := t[1];
+      T := buff[i];
+      if T[0] < MinX then
+          MinX := T[0]
+      else if T[0] > MaxX then
+          MaxX := T[0];
+      if T[1] < MinY then
+          MinY := T[1]
+      else if T[1] > MaxY then
+          MaxY := T[1];
     end;
-  Result := Make2DRect(MinX, MinY, MaxX, MaxY);
+  Result := MakeRectV2(MinX, MinY, MaxX, MaxY);
 end;
 
-function BoundRect(const p1, p2, p3, p4: T2DPoint): T2DRect;
-{$IFDEF FPC}
+function BoundRect(const p1, p2, p3, p4: TVec2): TRectV2;
 var
-  Buff: TArray2DPoint;
+  buff: TArrayVec2;
 begin
-  SetLength(Buff, 4);
-  Buff[0] := p1;
-  Buff[1] := p2;
-  Buff[2] := p3;
-  Buff[3] := p4;
-  Result := BoundRect(Buff);
+  SetLength(buff, 4);
+  buff[0] := p1;
+  buff[1] := p2;
+  buff[2] := p3;
+  buff[3] := p4;
+  Result := BoundRect(buff);
 end;
-{$ELSE}
 
-
-begin
-  Result := BoundRect([p1, p2, p3, p4]);
-end;
-{$ENDIF}
-
-
-function BoundRect(const r1, r2: T2DRect): T2DRect;
+function BoundRect(const r1, r2: TRectV2): TRectV2;
 begin
   Result := BoundRect(r1[0], r1[1], r2[0], r2[1]);
 end;
 
-function BuffCentroid(const Buff: TArray2DPoint): T2DPoint;
+function BuffCentroid(const buff: TArrayVec2): TVec2;
 var
   i, Count: Integer;
-  asum    : TGeoFloat;
-  term    : TGeoFloat;
+  asum: TGeoFloat;
+  term: TGeoFloat;
 
-  t1, t2: T2DPoint;
+  t1, t2: TVec2;
 begin
   Result := NULLPoint;
-  Count := Length(Buff);
+  Count := length(buff);
 
   if Count < 3 then
       Exit;
 
   asum := Zero;
-  t2 := Buff[Count - 1];
+  t2 := buff[Count - 1];
 
   for i := 0 to Count - 1 do
     begin
-      t1 := Buff[i];
+      t1 := buff[i];
 
       term := ((t2[0] * t1[1]) - (t2[1] * t1[0]));
       asum := asum + term;
@@ -1684,40 +1894,31 @@ begin
     end;
 end;
 
-function BuffCentroid(const p1, p2, p3, p4: T2DPoint): T2DPoint;
-{$IFDEF FPC}
+function BuffCentroid(const p1, p2, p3, p4: TVec2): TVec2;
 var
-  Buff: TArray2DPoint;
+  buff: TArrayVec2;
 begin
-  SetLength(Buff, 4);
-  Buff[0] := p1;
-  Buff[1] := p2;
-  Buff[2] := p3;
-  Buff[3] := p4;
-  Result := BuffCentroid(Buff);
+  SetLength(buff, 4);
+  buff[0] := p1;
+  buff[1] := p2;
+  buff[2] := p3;
+  buff[3] := p4;
+  Result := BuffCentroid(buff);
 end;
-{$ELSE}
 
-
-begin
-  Result := BuffCentroid([p1, p2, p3, p4]);
-end;
-{$ENDIF}
-
-
-function FastRamerDouglasPeucker(var Points: TArray2DPoint; Epsilon: TGeoFloat): Integer;
+function FastRamerDouglasPeucker(var Points: TArrayVec2; Epsilon: TGeoFloat): Integer;
 var
-  i             : Integer;
-  Range         : array of Integer;
-  FirstIndex    : Integer;
-  LastIndex     : Integer;
-  LastPoint     : T2DPoint;
-  FirstLastDelta: T2DPoint;
-  DeltaMaxIndex : Integer;
-  Delta         : TGeoFloat;
-  DeltaMax      : TGeoFloat;
+  i: Integer;
+  Range: array of Integer;
+  FirstIndex: Integer;
+  LastIndex: Integer;
+  LastPoint: TVec2;
+  FirstLastDelta: TVec2;
+  DeltaMaxIndex: Integer;
+  Delta: TGeoFloat;
+  DeltaMax: TGeoFloat;
 begin
-  Result := Length(Points);
+  Result := length(Points);
   if Result < 3 then
       Exit;
   FirstIndex := 0;
@@ -1734,10 +1935,10 @@ begin
         DeltaMax := 0;
         DeltaMaxIndex := 0;
         LastPoint := Points[LastIndex];
-        FirstLastDelta := PointSub(Points[FirstIndex], LastPoint);
+        FirstLastDelta := Vec2Sub(Points[FirstIndex], LastPoint);
         for i := FirstIndex + 1 to LastIndex - 1 do
           begin
-            Delta := Abs((Points[i][0] - LastPoint[0]) * FirstLastDelta[1] - (Points[i][1] - LastPoint[1]) * FirstLastDelta[0]);
+            Delta := fabs((Points[i][0] - LastPoint[0]) * FirstLastDelta[1] - (Points[i][1] - LastPoint[1]) * FirstLastDelta[0]);
             if Delta > DeltaMax then
               begin
                 DeltaMaxIndex := i;
@@ -1770,12 +1971,12 @@ begin
   Inc(Result);
 end;
 
-procedure FastVertexReduction(Points: TArray2DPoint; Epsilon: TGeoFloat; var output: TArray2DPoint);
+procedure FastVertexReduction(Points: TArrayVec2; Epsilon: TGeoFloat; var output: TArrayVec2);
 
   procedure FilterPoints;
   var
-    Index     : Integer;
-    Count     : Integer;
+    index: Integer;
+    Count: Integer;
     SqrEpsilon: TGeoFloat;
   begin
     SqrEpsilon := Sqr(Epsilon);
@@ -1831,7 +2032,7 @@ begin
       Result := False;
 end;
 
-function Clip(const r1, r2: T2DRect; out r3: T2DRect): Boolean;
+function Clip(const r1, r2: TRectV2; out r3: TRectV2): Boolean;
 begin
   Result := Clip(
     r1[0][0], r1[0][1], r1[1][0], r1[1][1],
@@ -1856,15 +2057,15 @@ end;
 
 function Orientation(const x1, y1, z1, x2, y2, z2, x3, y3, z3, Px, Py, Pz: TGeoFloat): Integer;
 var
-  Px1 : TGeoFloat;
-  Px2 : TGeoFloat;
-  Px3 : TGeoFloat;
-  Py1 : TGeoFloat;
-  Py2 : TGeoFloat;
-  Py3 : TGeoFloat;
-  Pz1 : TGeoFloat;
-  Pz2 : TGeoFloat;
-  Pz3 : TGeoFloat;
+  Px1: TGeoFloat;
+  Px2: TGeoFloat;
+  Px3: TGeoFloat;
+  Py1: TGeoFloat;
+  Py2: TGeoFloat;
+  Py3: TGeoFloat;
+  Pz1: TGeoFloat;
+  Pz2: TGeoFloat;
+  Pz3: TGeoFloat;
   Orin: TGeoFloat;
 begin
   Px1 := x1 - Px;
@@ -1904,7 +2105,7 @@ begin
     );
 end;
 
-function SimpleIntersect(const Point1, Point2, Point3, Point4: T2DPoint): Boolean;
+function SimpleIntersect(const Point1, Point2, Point3, Point4: TVec2): Boolean;
 begin
   Result := SimpleIntersect(Point1[0], Point1[1], Point2[0], Point2[1], Point3[0], Point3[1], Point4[0], Point4[1]);
 end;
@@ -1915,15 +2116,15 @@ var
   UpperY: TGeoFloat;
   LowerX: TGeoFloat;
   LowerY: TGeoFloat;
-  Ax    : TGeoFloat;
-  Bx    : TGeoFloat;
-  Cx    : TGeoFloat;
-  Ay    : TGeoFloat;
-  By    : TGeoFloat;
-  Cy    : TGeoFloat;
-  d     : TGeoFloat;
-  F     : TGeoFloat;
-  e     : TGeoFloat;
+  Ax: TGeoFloat;
+  Bx: TGeoFloat;
+  Cx: TGeoFloat;
+  Ay: TGeoFloat;
+  By: TGeoFloat;
+  Cy: TGeoFloat;
+  d: TGeoFloat;
+  F: TGeoFloat;
+  E: TGeoFloat;
 begin
   Result := False;
 
@@ -1984,14 +2185,14 @@ begin
   else if (d > Zero) or (d < F) then
       Exit;
 
-  e := (Ax * Cy) - (Ay * Cx);
+  E := (Ax * Cy) - (Ay * Cx);
 
   if F > Zero then
     begin
-      if (e < Zero) or (e > F) then
+      if (E < Zero) or (E > F) then
           Exit;
     end
-  else if (e > Zero) or (e < F) then
+  else if (E > Zero) or (E < F) then
       Exit;
 
   Result := True;
@@ -2003,16 +2204,16 @@ var
   UpperY: TGeoFloat;
   LowerX: TGeoFloat;
   LowerY: TGeoFloat;
-  Ax    : TGeoFloat;
-  Bx    : TGeoFloat;
-  Cx    : TGeoFloat;
-  Ay    : TGeoFloat;
-  By    : TGeoFloat;
-  Cy    : TGeoFloat;
-  d     : TGeoFloat;
-  F     : TGeoFloat;
-  e     : TGeoFloat;
-  Ratio : TGeoFloat;
+  Ax: TGeoFloat;
+  Bx: TGeoFloat;
+  Cx: TGeoFloat;
+  Ay: TGeoFloat;
+  By: TGeoFloat;
+  Cy: TGeoFloat;
+  d: TGeoFloat;
+  F: TGeoFloat;
+  E: TGeoFloat;
+  Ratio: TGeoFloat;
 begin
   Result := False;
 
@@ -2073,14 +2274,14 @@ begin
   else if (d > Zero) or (d < F) then
       Exit;
 
-  e := (Ax * Cy) - (Ay * Cx);
+  E := (Ax * Cy) - (Ay * Cx);
 
   if F > Zero then
     begin
-      if (e < Zero) or (e > F) then
+      if (E < Zero) or (E > F) then
           Exit;
     end
-  else if (e > Zero) or (e < F) then
+  else if (E > Zero) or (E < F) then
       Exit;
 
   Result := True;
@@ -2120,29 +2321,88 @@ begin
     end;
 end;
 
-function Intersect(const pt1, pt2, pt3, pt4: T2DPoint; out pt: T2DPoint): Boolean;
+function Intersect(const pt1, pt2, pt3, pt4: TVec2; out pt: TVec2): Boolean;
 begin
   Result := Intersect(pt1[0], pt1[1], pt2[0], pt2[1], pt3[0], pt3[1], pt4[0], pt4[1], pt[0], pt[1]);
 end;
 
-function Intersect(const pt1, pt2, pt3, pt4: T2DPoint): Boolean;
+function Intersect(const pt1, pt2, pt3, pt4: TVec2): Boolean;
 begin
   Result := Intersect(pt1[0], pt1[1], pt2[0], pt2[1], pt3[0], pt3[1], pt4[0], pt4[1]);
 end;
 
-function PointInCircle(const pt, cp: T2DPoint; radius: TGeoFloat): Boolean;
+function PointInCircle(const pt, cp: TVec2; radius: TGeoFloat): Boolean;
 begin
   Result := (PointLayDistance(pt, cp) <= (radius * radius));
 end;
 
+function PointInTriangle(const Px, Py, x1, y1, x2, y2, x3, y3: TGeoFloat): Boolean;
+var
+  Or1, Or2, Or3: Integer;
+begin
+  Or1 := Orientation(x1, y1, x2, y2, Px, Py);
+  Or2 := Orientation(x2, y2, x3, y3, Px, Py);
+
+  if (Or1 * Or2) = -1 then
+      Result := False
+  else
+    begin
+      Or3 := Orientation(x3, y3, x1, y1, Px, Py);
+      if (Or1 = Or3) or (Or3 = 0) then
+          Result := True
+      else if Or1 = 0 then
+          Result := (Or2 * Or3) >= 0
+      else if Or2 = 0 then
+          Result := (Or1 * Or3) >= 0
+      else
+          Result := False;
+    end;
+end;
+
+procedure BuildSinCosCache(const oSin, oCos: PGeoFloatArray; const b, E: TGeoFloat);
+var
+  i: Integer;
+  startAngle, stopAngle, d, alpha, beta: TGeoFloat;
+begin
+  startAngle := b;
+  stopAngle := E + 1E-5;
+  if high(oSin^) > low(oSin^) then
+      d := PIDiv180 * (stopAngle - startAngle) / (high(oSin^) - low(oSin^))
+  else
+      d := 0;
+
+  if high(oSin^) - low(oSin^) < 1000 then
+    begin
+      // Fast computation (approx 5.5x)
+      alpha := 2 * Sqr(Sin(d * 0.5));
+      beta := Sin(d);
+      SinCos(startAngle * PIDiv180, oSin^[low(oSin^)], oCos^[low(oSin^)]);
+      for i := low(oSin^) to high(oSin^) - 1 do
+        begin
+          // Make use of the incremental formulae:
+          // cos (theta+delta) = cos(theta) - [alpha*cos(theta) + beta*sin(theta)]
+          // sin (theta+delta) = sin(theta) - [alpha*sin(theta) - beta*cos(theta)]
+          oCos^[i + 1] := oCos^[i] - alpha * oCos^[i] - beta * oSin^[i];
+          oSin^[i + 1] := oSin^[i] - alpha * oSin^[i] + beta * oCos^[i];
+        end;
+    end
+  else
+    begin
+      // Slower, but maintains precision when steps are small
+      startAngle := startAngle * PIDiv180;
+      for i := low(oSin^) to high(oSin^) do
+          SinCos((i - low(oSin^)) * d + startAngle, oSin^[i], oCos^[i]);
+    end;
+end;
+
 procedure ClosestPointOnSegmentFromPoint(const x1, y1, x2, y2, Px, Py: TGeoFloat; out Nx, Ny: TGeoFloat);
 var
-  Vx   : TGeoFloat;
-  Vy   : TGeoFloat;
-  Wx   : TGeoFloat;
-  Wy   : TGeoFloat;
-  c1   : TGeoFloat;
-  c2   : TGeoFloat;
+  Vx: TGeoFloat;
+  Vy: TGeoFloat;
+  Wx: TGeoFloat;
+  Wy: TGeoFloat;
+  c1: TGeoFloat;
+  c2: TGeoFloat;
   Ratio: TGeoFloat;
 begin
   Vx := x2 - x1;
@@ -2174,7 +2434,7 @@ begin
   Ny := y1 + Ratio * Vy;
 end;
 
-function ClosestPointOnSegmentFromPoint(const lb, le, pt: T2DPoint): T2DPoint;
+function ClosestPointOnSegmentFromPoint(const lb, le, pt: TVec2): TVec2;
 begin
   ClosestPointOnSegmentFromPoint(lb[0], lb[1], le[0], le[1], pt[0], pt[1], Result[0], Result[1]);
 end;
@@ -2304,60 +2564,60 @@ begin
   Ny := Py - 0.70710678118654752440084436210485 * Distance;
 end;
 
-function ProjectPoint0(const Point: T2DPoint; const Distance: TGeoFloat): T2DPoint;
+function ProjectPoint0(const Point: TVec2; const Distance: TGeoFloat): TVec2;
 begin
   ProjectPoint0(Point[0], Point[1], Distance, Result[0], Result[1]);
 end;
 
-function ProjectPoint45(const Point: T2DPoint; const Distance: TGeoFloat): T2DPoint;
+function ProjectPoint45(const Point: TVec2; const Distance: TGeoFloat): TVec2;
 begin
   ProjectPoint45(Point[0], Point[1], Distance, Result[0], Result[1]);
 end;
 
-function ProjectPoint90(const Point: T2DPoint; const Distance: TGeoFloat): T2DPoint;
+function ProjectPoint90(const Point: TVec2; const Distance: TGeoFloat): TVec2;
 begin
   ProjectPoint90(Point[0], Point[1], Distance, Result[0], Result[1]);
 end;
 
-function ProjectPoint135(const Point: T2DPoint; const Distance: TGeoFloat): T2DPoint;
+function ProjectPoint135(const Point: TVec2; const Distance: TGeoFloat): TVec2;
 begin
   ProjectPoint135(Point[0], Point[1], Distance, Result[0], Result[1]);
 end;
 
-function ProjectPoint180(const Point: T2DPoint; const Distance: TGeoFloat): T2DPoint;
+function ProjectPoint180(const Point: TVec2; const Distance: TGeoFloat): TVec2;
 begin
   ProjectPoint180(Point[0], Point[1], Distance, Result[0], Result[1]);
 end;
 
-function ProjectPoint225(const Point: T2DPoint; const Distance: TGeoFloat): T2DPoint;
+function ProjectPoint225(const Point: TVec2; const Distance: TGeoFloat): TVec2;
 begin
   ProjectPoint225(Point[0], Point[1], Distance, Result[0], Result[1]);
 end;
 
-function ProjectPoint270(const Point: T2DPoint; const Distance: TGeoFloat): T2DPoint;
+function ProjectPoint270(const Point: TVec2; const Distance: TGeoFloat): TVec2;
 begin
   ProjectPoint270(Point[0], Point[1], Distance, Result[0], Result[1]);
 end;
 
-function ProjectPoint315(const Point: T2DPoint; const Distance: TGeoFloat): T2DPoint;
+function ProjectPoint315(const Point: TVec2; const Distance: TGeoFloat): TVec2;
 begin
   ProjectPoint315(Point[0], Point[1], Distance, Result[0], Result[1]);
 end;
 
-function GetCicleRadiusInPolyEndge(r: TGeoFloat; PolySlices: Integer): TGeoFloat;
+function GetCicleRadiusInPolyEndge(R: TGeoFloat; PolySlices: Integer): TGeoFloat;
 begin
-  Result := r / Sin((180 - 360 / PolySlices) * 0.5 / 180 * pi);
+  Result := R / Sin((180 - 360 / PolySlices) * 0.5 / 180 * pi);
 end;
 
-procedure Circle2LineIntersectionPoint(const lb, le, cp: T2DPoint; const radius: TGeoFloat;
-  out pt1in, pt2in: Boolean; out ICnt: Integer; out pt1, pt2: T2DPoint);
+procedure Circle2LineIntersectionPoint(const lb, le, cp: TVec2; const radius: TGeoFloat;
+  out pt1in, pt2in: Boolean; out ICnt: Integer; out pt1, pt2: TVec2);
 var
-  Px  : TGeoFloat;
-  Py  : TGeoFloat;
+  Px: TGeoFloat;
+  Py: TGeoFloat;
   S1In: Boolean;
   s2In: Boolean;
-  h   : TGeoFloat;
-  a   : TGeoFloat;
+  h: TGeoFloat;
+  A: TGeoFloat;
 begin
   ICnt := 0;
 
@@ -2383,16 +2643,16 @@ begin
       if S1In then
         begin
           h := Distance(Px, Py, cp[0], cp[1]);
-          a := Sqrt((radius * radius) - (h * h));
+          A := Sqrt((radius * radius) - (h * h));
           pt1 := lb;
-          ProjectPoint(Px, Py, le[0], le[1], a, pt2[0], pt2[1]);
+          ProjectPoint(Px, Py, le[0], le[1], A, pt2[0], pt2[1]);
         end
       else if s2In then
         begin
           h := Distance(Px, Py, cp[0], cp[1]);
-          a := Sqrt((radius * radius) - (h * h));
+          A := Sqrt((radius * radius) - (h * h));
           pt1 := le;
-          ProjectPoint(Px, Py, lb[0], lb[1], a, pt2[0], pt2[1]);
+          ProjectPoint(Px, Py, lb[0], lb[1], A, pt2[0], pt2[1]);
         end;
       Exit;
     end;
@@ -2426,26 +2686,26 @@ begin
       else
         begin
           ICnt := 2;
-          a := Sqrt((radius * radius) - (h * h));
-          ProjectPoint(Px, Py, lb[0], lb[1], a, pt1[0], pt1[1]);
-          ProjectPoint(Px, Py, le[0], le[1], a, pt2[0], pt2[1]);
+          A := Sqrt((radius * radius) - (h * h));
+          ProjectPoint(Px, Py, lb[0], lb[1], A, pt1[0], pt1[1]);
+          ProjectPoint(Px, Py, le[0], le[1], A, pt2[0], pt2[1]);
           Exit;
         end;
     end;
 end;
 
-procedure Circle2CircleIntersectionPoint(const cp1, cp2: T2DPoint; const r1, r2: TGeoFloat; out Point1, Point2: T2DPoint);
+procedure Circle2CircleIntersectionPoint(const cp1, cp2: TVec2; const r1, r2: TGeoFloat; out Point1, Point2: TVec2);
 var
-  Dist  : TGeoFloat;
-  a     : TGeoFloat;
-  h     : TGeoFloat;
+  Dist: TGeoFloat;
+  A: TGeoFloat;
+  h: TGeoFloat;
   RatioA: TGeoFloat;
   RatioH: TGeoFloat;
-  dx    : TGeoFloat;
-  dy    : TGeoFloat;
-  Phi   : T2DPoint;
-  r1Sqr : TGeoFloat;
-  r2Sqr : TGeoFloat;
+  dx: TGeoFloat;
+  dy: TGeoFloat;
+  Phi: TVec2;
+  r1Sqr: TGeoFloat;
+  r2Sqr: TGeoFloat;
   dstSqr: TGeoFloat;
 begin
   Dist := Distance(cp1[0], cp1[1], cp2[0], cp2[1]);
@@ -2454,10 +2714,10 @@ begin
   r1Sqr := r1 * r1;
   r2Sqr := r2 * r2;
 
-  a := (dstSqr - r2Sqr + r1Sqr) / (2 * Dist);
-  h := Sqrt(r1Sqr - (a * a));
+  A := (dstSqr - r2Sqr + r1Sqr) / (2 * Dist);
+  h := Sqrt(r1Sqr - (A * A));
 
-  RatioA := a / Dist;
+  RatioA := A / Dist;
   RatioH := h / Dist;
 
   dx := cp2[0] - cp1[0];
@@ -2476,30 +2736,30 @@ begin
   Point2[1] := Phi[1] + dx;
 end;
 
-function Check_Circle2Circle(const p1, p2: T2DPoint; const r1, r2: TGeoFloat): Boolean;
+function Detect_Circle2Circle(const p1, p2: TVec2; const r1, r2: TGeoFloat): Boolean;
 begin
   // return point disace < sum
   Result := PointDistance(p1, p2) <= r1 + r2;
 end;
 
-function CircleCollision(const p1, p2: T2DPoint; const r1, r2: TGeoFloat): Boolean;
+function CircleCollision(const p1, p2: TVec2; const r1, r2: TGeoFloat): Boolean;
 begin
   // return point disace < sum
   Result := PointDistance(p1, p2) <= r1 + r2;
 end;
 
-function Check_Circle2CirclePoint(const p1, p2: T2DPoint; const r1, r2: TGeoFloat; out op1, op2: T2DPoint): Boolean;
+function Detect_Circle2CirclePoint(const p1, p2: TVec2; const r1, r2: TGeoFloat; out op1, op2: TVec2): Boolean;
 var
-  Dist  : TGeoFloat;
-  a     : TGeoFloat;
-  h     : TGeoFloat;
+  Dist: TGeoFloat;
+  A: TGeoFloat;
+  h: TGeoFloat;
   RatioA: TGeoFloat;
   RatioH: TGeoFloat;
-  dx    : TGeoFloat;
-  dy    : TGeoFloat;
-  Phi   : T2DPoint;
-  r1Sqr : TGeoFloat;
-  r2Sqr : TGeoFloat;
+  dx: TGeoFloat;
+  dy: TGeoFloat;
+  Phi: TVec2;
+  r1Sqr: TGeoFloat;
+  r2Sqr: TGeoFloat;
   dstSqr: TGeoFloat;
 begin
   Dist := Distance(p1[0], p1[1], p2[0], p2[1]);
@@ -2510,10 +2770,10 @@ begin
       r1Sqr := r1 * r1;
       r2Sqr := r2 * r2;
 
-      a := (dstSqr - r2Sqr + r1Sqr) / (2 * Dist);
-      h := Sqrt(r1Sqr - (a * a));
+      A := (dstSqr - r2Sqr + r1Sqr) / (2 * Dist);
+      h := Sqrt(r1Sqr - (A * A));
 
-      RatioA := a / Dist;
+      RatioA := A / Dist;
       RatioH := h / Dist;
 
       dx := p2[0] - p1[0];
@@ -2535,27 +2795,27 @@ end;
 
 // circle 2 line collision
 
-function Check_Circle2Line(const cp: T2DPoint; const r: TGeoFloat; const lb, le: T2DPoint): Boolean;
+function Detect_Circle2Line(const cp: TVec2; const R: TGeoFloat; const lb, le: TVec2): Boolean;
 var
-  lineCen, v1, v2: T2DPoint;
+  lineCen, v1, v2: TVec2;
 begin
   lineCen := PointLerp(lb, le, 0.5);
-  if Check_Circle2Circle(cp, lineCen, r, PointDistance(lb, le) * 0.5) then
+  if Detect_Circle2Circle(cp, lineCen, R, PointDistance(lb, le) * 0.5) then
     begin
-      v1 := PointSub(lb, cp);
-      v2 := PointSub(le, cp);
-      Result := GreaterThanOrEqual(((r * r) * PointLayDistance(v1, v2) - Sqr(v1[0] * v2[1] - v1[1] * v2[0])), Zero);
+      v1 := Vec2Sub(lb, cp);
+      v2 := Vec2Sub(le, cp);
+      Result := GreaterThanOrEqual(((R * R) * PointLayDistance(v1, v2) - Sqr(v1[0] * v2[1] - v1[1] * v2[0])), Zero);
     end
   else
       Result := False;
 end;
 
-function T2DPointList.GetPoints(Index: Integer): P2DPoint;
+function TVec2List.GetPoints(index: Integer): PVec2;
 begin
   Result := FList[index];
 end;
 
-constructor T2DPointList.Create;
+constructor TVec2List.Create;
 begin
   inherited Create;
   FList := TCoreClassList.Create;
@@ -2563,133 +2823,153 @@ begin
   FUserObject := nil;
 end;
 
-destructor T2DPointList.Destroy;
+destructor TVec2List.Destroy;
 begin
   Clear;
   DisposeObject(FList);
   inherited Destroy;
 end;
 
-procedure T2DPointList.Add(X, Y: TGeoFloat);
+procedure TVec2List.Add(const X, Y: TGeoFloat);
 var
-  p: P2DPoint;
+  p: PVec2;
 begin
-  New(p);
+  new(p);
   p^ := PointMake(X, Y);
   FList.Add(p);
 end;
 
-procedure T2DPointList.Add(pt: T2DPoint);
+procedure TVec2List.Add(const pt: TVec2);
+var
+  p: PVec2;
 begin
-  Add(pt[0], pt[1]);
+  new(p);
+  p^ := pt;
+  FList.Add(p);
 end;
 
-procedure T2DPointList.AddSubdivision(nbCount: Integer; pt: T2DPoint);
+procedure TVec2List.Add(v2l: TVec2List);
 var
-  lpt: P2DPoint;
-  i  : Integer;
-  t  : Double;
+  i: Integer;
+begin
+  for i := 0 to v2l.Count - 1 do
+      Add(v2l[i]^);
+end;
+
+procedure TVec2List.Add(R: TRectV2);
+begin
+  Add(R[0][0], R[0][1]);
+  Add(R[1][0], R[0][1]);
+  Add(R[1][0], R[1][1]);
+  Add(R[0][0], R[1][1]);
+end;
+
+procedure TVec2List.AddSubdivision(nbCount: Integer; pt: TVec2);
+var
+  lpt: PVec2;
+  i: Integer;
+  T: Double;
 begin
   if Count > 0 then
     begin
       lpt := FList.Last;
-      t := 1.0 / nbCount;
+      T := 1.0 / nbCount;
       for i := 1 to nbCount do
-          Add(PointLerp(lpt^, pt, t * i));
+          Add(PointLerp(lpt^, pt, T * i));
     end
   else
       Add(pt);
 end;
 
-procedure T2DPointList.AddSubdivisionWithDistance(avgDist: TGeoFloat; pt: T2DPoint);
+procedure TVec2List.AddSubdivisionWithDistance(avgDist: TGeoFloat; pt: TVec2);
 var
-  lpt       : P2DPoint;
+  lpt: PVec2;
   i, nbCount: Integer;
-  t         : Double;
+  T: Double;
 begin
-  if (Count > 0) and (PointDistance(P2DPoint(FList.Last)^, pt) > avgDist) then
+  if (Count > 0) and (PointDistance(PVec2(FList.Last)^, pt) > avgDist) then
     begin
       lpt := FList.Last;
-      nbCount := Trunc(PointDistance(P2DPoint(FList.Last)^, pt) / avgDist);
-      t := 1.0 / nbCount;
+      nbCount := Trunc(PointDistance(PVec2(FList.Last)^, pt) / avgDist);
+      T := 1.0 / nbCount;
       for i := 1 to nbCount do
-          Add(PointLerp(lpt^, pt, t * i));
+          Add(PointLerp(lpt^, pt, T * i));
     end;
   Add(pt);
 end;
 
-procedure T2DPointList.Insert(idx: Integer; X, Y: TGeoFloat);
+procedure TVec2List.Insert(idx: Integer; X, Y: TGeoFloat);
 var
-  p: P2DPoint;
+  p: PVec2;
 begin
-  New(p);
+  new(p);
   p^ := PointMake(X, Y);
   FList.Insert(idx, p);
 end;
 
-procedure T2DPointList.Delete(idx: Integer);
+procedure TVec2List.Delete(idx: Integer);
 begin
-  Dispose(P2DPoint(FList[idx]));
+  Dispose(PVec2(FList[idx]));
   FList.Delete(idx);
 end;
 
-procedure T2DPointList.Clear;
+procedure TVec2List.Clear;
 var
   i: Integer;
 begin
   for i := 0 to FList.Count - 1 do
-      Dispose(P2DPoint(FList[i]));
+      Dispose(PVec2(FList[i]));
   FList.Clear;
 end;
 
-function T2DPointList.Count: Integer;
+function TVec2List.Count: Integer;
 begin
   Result := FList.Count;
 end;
 
-procedure T2DPointList.FixedSameError;
+procedure TVec2List.FixedSameError;
 var
-  l, p: P2DPoint;
-  i   : Integer;
+  L, p: PVec2;
+  i: Integer;
 begin
   if Count < 2 then
       Exit;
 
-  l := P2DPoint(FList[0]);
-  p := P2DPoint(FList[Count - 1]);
-  while (Count >= 2) and (IsEqual(p^, l^)) do
+  L := PVec2(FList[0]);
+  p := PVec2(FList[Count - 1]);
+  while (Count >= 2) and (IsEqual(p^, L^)) do
     begin
       Delete(Count - 1);
-      p := P2DPoint(FList[Count - 1]);
+      p := PVec2(FList[Count - 1]);
     end;
 
   if Count < 2 then
       Exit;
 
-  l := P2DPoint(FList[0]);
+  L := PVec2(FList[0]);
   i := 1;
   while i < Count do
     begin
-      p := P2DPoint(FList[i]);
-      if IsEqual(p^, l^) then
+      p := PVec2(FList[i]);
+      if IsEqual(p^, L^) then
           Delete(i)
       else
         begin
-          l := p;
+          L := p;
           Inc(i);
         end;
     end;
 end;
 
-procedure T2DPointList.Assign(Source: TCoreClassPersistent);
+procedure TVec2List.Assign(Source: TCoreClassPersistent);
 var
   i: Integer;
 begin
-  if Source is T2DPointList then
+  if Source is TVec2List then
     begin
       Clear;
-      for i := 0 to T2DPointList(Source).Count - 1 do
-          Add(T2DPointList(Source)[i]^);
+      for i := 0 to TVec2List(Source).Count - 1 do
+          Add(TVec2List(Source)[i]^);
     end
   else if Source is TPoly then
     begin
@@ -2699,14 +2979,14 @@ begin
     end;
 end;
 
-procedure T2DPointList.SaveToStream(Stream: TCoreClassStream);
+procedure TVec2List.SaveToStream(stream: TCoreClassStream);
 var
-  w: TDataWriter;
+  w: TWriter;
   i: Integer;
-  p: P2DPoint;
+  p: PVec2;
 begin
-  w := TDataWriter.Create(Stream);
-  w.writeInteger(Count);
+  w := TWriter.Create(stream, 8192);
+  w.WriteInteger(Count);
   for i := 0 to Count - 1 do
     begin
       p := GetPoints(i);
@@ -2716,30 +2996,30 @@ begin
   DisposeObject(w);
 end;
 
-procedure T2DPointList.LoadFromStream(Stream: TCoreClassStream);
+procedure TVec2List.LoadFromStream(stream: TCoreClassStream);
 var
-  r: TDataReader;
-  c: Integer;
+  R: TReader;
+  C: Integer;
   i: Integer;
 begin
   Clear;
-  r := TDataReader.Create(Stream);
-  c := r.ReadInteger;
-  for i := 0 to c - 1 do
-      Add(r.ReadSingle, r.ReadSingle);
-  DisposeObject(r);
+  R := TReader.Create(stream, 8192);
+  C := R.ReadInteger;
+  for i := 0 to C - 1 do
+      Add(R.ReadSingle, R.ReadSingle);
+  DisposeObject(R);
 end;
 
-function T2DPointList.BoundRect: T2DRect;
+function TVec2List.BoundRect: TRectV2;
 var
-  p   : P2DPoint;
+  p: PVec2;
   MaxX: TGeoFloat;
   MaxY: TGeoFloat;
   MinX: TGeoFloat;
   MinY: TGeoFloat;
-  i   : Integer;
+  i: Integer;
 begin
-  Result := Make2DRect(Zero, Zero, Zero, Zero);
+  Result := MakeRectV2(Zero, Zero, Zero, Zero);
   if Count < 2 then
       Exit;
   p := Items[0];
@@ -2760,13 +3040,13 @@ begin
       else if p^[1] > MaxY then
           MaxY := p^[1];
     end;
-  Result := Make2DRect(MinX, MinY, MaxX, MaxY);
+  Result := MakeRectV2(MinX, MinY, MaxX, MaxY);
 end;
 
-function T2DPointList.CircleRadius(ACentroid: T2DPoint): TGeoFloat;
+function TVec2List.CircleRadius(ACentroid: TVec2): TGeoFloat;
 var
-  i      : Integer;
-  LayLen : TGeoFloat;
+  i: Integer;
+  LayLen: TGeoFloat;
   LayDist: TGeoFloat;
 begin
   Result := 0;
@@ -2782,13 +3062,13 @@ begin
   Result := Sqrt(LayLen);
 end;
 
-function T2DPointList.Centroid: T2DPoint;
+function TVec2List.Centroid: TVec2;
 var
-  i   : Integer;
+  i: Integer;
   asum: TGeoFloat;
   term: TGeoFloat;
 
-  p1, p2: P2DPoint;
+  p1, p2: PVec2;
 begin
   Result := NULLPoint;
 
@@ -2816,10 +3096,10 @@ begin
     end;
 end;
 
-function T2DPointList.PointInHere(pt: T2DPoint): Boolean;
+function TVec2List.PointInHere(pt: TVec2): Boolean;
 var
-  i     : Integer;
-  pi, pj: P2DPoint;
+  i: Integer;
+  pi, pj: PVec2;
 begin
   Result := False;
   if Count < 3 then
@@ -2839,31 +3119,31 @@ begin
     end;
 end;
 
-procedure T2DPointList.RotateAngle(axis: T2DPoint; angle: TGeoFloat);
+procedure TVec2List.RotateAngle(Axis: TVec2; angle: TGeoFloat);
 var
   i: Integer;
-  p: P2DPoint;
+  p: PVec2;
 begin
   for i := 0 to Count - 1 do
     begin
       p := Items[i];
-      p^ := PointRotation(axis, p^, PointAngle(axis, p^) + angle);
+      p^ := PointRotation(Axis, p^, PointAngle(Axis, p^) + angle);
     end;
 end;
 
-procedure T2DPointList.Scale(axis: T2DPoint; Scale: TGeoFloat);
+procedure TVec2List.Scale(Axis: TVec2; Scale: TGeoFloat);
 var
   i: Integer;
-  p: P2DPoint;
+  p: PVec2;
 begin
   for i := 0 to Count - 1 do
     begin
       p := Items[i];
-      p^ := PointRotation(axis, PointDistance(axis, p^) * Scale, PointAngle(axis, p^));
+      p^ := PointRotation(Axis, PointDistance(Axis, p^) * Scale, PointAngle(Axis, p^));
     end;
 end;
 
-procedure T2DPointList.ConvexHull(output: T2DPointList);
+procedure TVec2List.ConvexHull(output: TVec2List);
 
 const
   RightHandSide        = -1;
@@ -2881,10 +3161,10 @@ type
   TCompareResult = (eGreaterThan, eLessThan, eEqual);
 
 var
-  Point            : array of T2DHullPoint;
-  Stack            : array of T2DHullPoint;
+  Point: array of T2DHullPoint;
+  Stack: array of T2DHullPoint;
   StackHeadPosition: Integer;
-  Anchor           : T2DHullPoint;
+  Anchor: T2DHullPoint;
 
   function CartesianAngle(const X, Y: TGeoFloat): TGeoFloat;
   const
@@ -2908,13 +3188,13 @@ var
         Result := Zero;
   end;
 
-  procedure Swap(i, j: Integer; var Point: array of T2DHullPoint);
+  procedure Swap(i, J: Integer; var Point: array of T2DHullPoint);
   var
-    temp: T2DHullPoint;
+    Temp: T2DHullPoint;
   begin
-    temp := Point[i];
-    Point[i] := Point[j];
-    Point[j] := temp;
+    Temp := Point[i];
+    Point[i] := Point[J];
+    Point[J] := Temp;
   end;
 
   function hEqual(const p1, p2: T2DHullPoint): Boolean;
@@ -2938,14 +3218,14 @@ var
 
   procedure RQSort(Left, Right: Integer; var Point: array of T2DHullPoint);
   var
-    i     : Integer;
-    j     : Integer;
+    i: Integer;
+    J: Integer;
     Middle: Integer;
-    Pivot : T2DHullPoint;
+    Pivot: T2DHullPoint;
   begin
     repeat
       i := Left;
-      j := Right;
+      J := Right;
       Middle := (Left + Right) div 2;
       (* Median of 3 Pivot Selection *)
       if CompareAngles(Point[Middle], Point[Left]) = eLessThan then
@@ -2958,17 +3238,17 @@ var
       repeat
         while CompareAngles(Point[i], Pivot) = eLessThan do
             Inc(i);
-        while CompareAngles(Point[j], Pivot) = eGreaterThan do
-            Dec(j);
-        if i <= j then
+        while CompareAngles(Point[J], Pivot) = eGreaterThan do
+            Dec(J);
+        if i <= J then
           begin
-            Swap(i, j, Point);
+            Swap(i, J, Point);
             Inc(i);
-            Dec(j);
+            Dec(J);
           end;
-      until i > j;
-      if Left < j then
-          RQSort(Left, j, Point);
+      until i > J;
+      if Left < J then
+          RQSort(Left, J, Point);
       Left := i;
     until i >= Right;
   end;
@@ -2991,13 +3271,13 @@ var
 
   function Head: T2DHullPoint;
   begin
-    Assert((StackHeadPosition >= 0) and (StackHeadPosition < Length(Stack)), 'Invalid stack-head position.');
+    Assert((StackHeadPosition >= 0) and (StackHeadPosition < length(Stack)), 'Invalid stack-head position.');
     Result := Stack[StackHeadPosition];
   end;
 
   function PreHead: T2DHullPoint;
   begin
-    Assert(((StackHeadPosition - 1) >= 0) and ((StackHeadPosition - 1) < Length(Stack)), 'Invalid pre stack-head position.');
+    Assert(((StackHeadPosition - 1) >= 0) and ((StackHeadPosition - 1) < length(Stack)), 'Invalid pre stack-head position.');
     Result := Stack[StackHeadPosition - 1];
   end;
 
@@ -3027,13 +3307,13 @@ var
 
   procedure GrahamScan;
   var
-    i   : Integer;
+    i: Integer;
     Orin: Integer;
   begin
     Push(Point[0]);
     Push(Point[1]);
     i := 2;
-    while i < Length(Point) do
+    while i < length(Point) do
       begin
         if PreHeadExist then
           begin
@@ -3056,8 +3336,8 @@ var
 
 var
   i: Integer;
-  j: Integer;
-  p: P2DPoint;
+  J: Integer;
+  p: PVec2;
 begin
   if Count <= 3 then
     begin
@@ -3070,28 +3350,28 @@ begin
   try
     SetLength(Point, Count);
     SetLength(Stack, Count);
-    j := 0;
+    J := 0;
     for i := 0 to Count - 1 do
       begin
         p := Items[i];
         Point[i].X := p^[0];
         Point[i].Y := p^[1];
         Point[i].Ang := 0.0;
-        if Point[i].Y < Point[j].Y then
-            j := i
-        else if Point[i].Y = Point[j].Y then
-          if Point[i].X < Point[j].X then
-              j := i;
+        if Point[i].Y < Point[J].Y then
+            J := i
+        else if Point[i].Y = Point[J].Y then
+          if Point[i].X < Point[J].X then
+              J := i;
       end;
 
-    Swap(0, j, Point);
+    Swap(0, J, Point);
     Point[0].Ang := 0;
     Anchor := Point[0];
     (* Calculate angle of the vertex ([ith point]-[anchorpoint]-[most left point]) *)
-    for i := 1 to Length(Point) - 1 do
+    for i := 1 to length(Point) - 1 do
         Point[i].Ang := CartesianAngle(Point[i].X - Anchor.X, Point[i].Y - Anchor.Y);
     (* Sort points in ascending order according to their angles *)
-    RQSort(1, Length(Point) - 1, Point);
+    RQSort(1, length(Point) - 1, Point);
     GrahamScan;
     (* output list *)
     for i := 0 to StackHeadPosition do
@@ -3103,7 +3383,7 @@ begin
   end;
 end;
 
-procedure T2DPointList.ExtractToBuff(var output: TArray2DPoint);
+procedure TVec2List.ExtractToBuff(var output: TArrayVec2);
 var
   i: Integer;
 begin
@@ -3112,7 +3392,7 @@ begin
       output[i] := Items[i]^;
 end;
 
-procedure T2DPointList.GiveListDataFromBuff(output: PArray2DPoint);
+procedure TVec2List.GiveListDataFromBuff(output: PArrayVec2);
 var
   i: Integer;
 begin
@@ -3121,19 +3401,19 @@ begin
       Add(output^[i]);
 end;
 
-procedure T2DPointList.VertexReduction(Epsilon: TGeoFloat);
+procedure TVec2List.VertexReduction(Epsilon: TGeoFloat);
 var
-  Buff, output: TArray2DPoint;
+  buff, output: TArrayVec2;
 begin
-  ExtractToBuff(Buff);
-  FastVertexReduction(Buff, Epsilon, output);
+  ExtractToBuff(buff);
+  FastVertexReduction(buff, Epsilon, output);
   GiveListDataFromBuff(@output);
 end;
 
-function T2DPointList.Line2Intersect(const lb, le: T2DPoint; ClosedPolyMode: Boolean; OutputPoint: T2DPointList): Boolean;
+function TVec2List.Line2Intersect(const lb, le: TVec2; ClosedPolyMode: Boolean; OutputPoint: TVec2List): Boolean;
 var
-  i     : Integer;
-  p1, p2: P2DPoint;
+  i: Integer;
+  p1, p2: PVec2;
   ox, oy: TGeoFloat;
 begin
   Result := False;
@@ -3178,12 +3458,12 @@ begin
     end;
 end;
 
-function T2DPointList.Line2NearIntersect(const lb, le: T2DPoint; const ClosedPolyMode: Boolean; out idx1, idx2: Integer; out IntersectPt: T2DPoint): Boolean;
+function TVec2List.Line2NearIntersect(const lb, le: TVec2; const ClosedPolyMode: Boolean; out idx1, idx2: Integer; out IntersectPt: TVec2): Boolean;
 var
-  i     : Integer;
-  p1, p2: P2DPoint;
+  i: Integer;
+  p1, p2: PVec2;
   ox, oy: TGeoFloat;
-  d, d2 : TGeoFloat;
+  d, d2: TGeoFloat;
 begin
   Result := False;
   if FList.Count > 1 then
@@ -3226,47 +3506,47 @@ begin
     end;
 end;
 
-procedure T2DPointList.SortOfNear(const pt: T2DPoint);
+procedure TVec2List.SortOfNear(const pt: TVec2);
 
   function ListSortCompare(Item1, Item2: Pointer): Integer;
   var
     d1, d2: TGeoFloat;
   begin
-    d1 := PointDistance(P2DPoint(Item1)^, pt);
-    d2 := PointDistance(P2DPoint(Item2)^, pt);
+    d1 := PointDistance(PVec2(Item1)^, pt);
+    d2 := PointDistance(PVec2(Item2)^, pt);
     Result := CompareValue(d1, d2);
   end;
 
-  procedure QuickSortList(var SortList: TCoreClassPointerList; l, r: Integer); {$IFDEF INLINE_ASM} inline; {$ENDIF}
+  procedure QuickSortList(var SortList: TCoreClassPointerList; L, R: Integer); {$IFDEF INLINE_ASM} inline; {$ENDIF}
   var
-    i, j: Integer;
-    p, t: Pointer;
+    i, J: Integer;
+    p, T: Pointer;
   begin
     repeat
-      i := l;
-      j := r;
-      p := SortList[(l + r) shr 1];
+      i := L;
+      J := R;
+      p := SortList[(L + R) shr 1];
       repeat
         while ListSortCompare(SortList[i], p) < 0 do
             Inc(i);
-        while ListSortCompare(SortList[j], p) > 0 do
-            Dec(j);
-        if i <= j then
+        while ListSortCompare(SortList[J], p) > 0 do
+            Dec(J);
+        if i <= J then
           begin
-            if i <> j then
+            if i <> J then
               begin
-                t := SortList[i];
-                SortList[i] := SortList[j];
-                SortList[j] := t;
+                T := SortList[i];
+                SortList[i] := SortList[J];
+                SortList[J] := T;
               end;
             Inc(i);
-            Dec(j);
+            Dec(J);
           end;
-      until i > j;
-      if l < j then
-          QuickSortList(SortList, l, j);
-      l := i;
-    until i >= r;
+      until i > J;
+      if L < J then
+          QuickSortList(SortList, L, J);
+      L := i;
+    until i >= R;
   end;
 
 begin
@@ -3274,47 +3554,47 @@ begin
       QuickSortList(FList.ListData^, 0, Count - 1);
 end;
 
-procedure T2DPointList.SortOfFar(const pt: T2DPoint);
+procedure TVec2List.SortOfFar(const pt: TVec2);
 
   function ListSortCompare(Item1, Item2: Pointer): Integer;
   var
     d1, d2: TGeoFloat;
   begin
-    d1 := PointDistance(P2DPoint(Item1)^, pt);
-    d2 := PointDistance(P2DPoint(Item2)^, pt);
+    d1 := PointDistance(PVec2(Item1)^, pt);
+    d2 := PointDistance(PVec2(Item2)^, pt);
     Result := CompareValue(d2, d1);
   end;
 
-  procedure QuickSortList(var SortList: TCoreClassPointerList; l, r: Integer); {$IFDEF INLINE_ASM} inline; {$ENDIF}
+  procedure QuickSortList(var SortList: TCoreClassPointerList; L, R: Integer); {$IFDEF INLINE_ASM} inline; {$ENDIF}
   var
-    i, j: Integer;
-    p, t: Pointer;
+    i, J: Integer;
+    p, T: Pointer;
   begin
     repeat
-      i := l;
-      j := r;
-      p := SortList[(l + r) shr 1];
+      i := L;
+      J := R;
+      p := SortList[(L + R) shr 1];
       repeat
         while ListSortCompare(SortList[i], p) < 0 do
             Inc(i);
-        while ListSortCompare(SortList[j], p) > 0 do
-            Dec(j);
-        if i <= j then
+        while ListSortCompare(SortList[J], p) > 0 do
+            Dec(J);
+        if i <= J then
           begin
-            if i <> j then
+            if i <> J then
               begin
-                t := SortList[i];
-                SortList[i] := SortList[j];
-                SortList[j] := t;
+                T := SortList[i];
+                SortList[i] := SortList[J];
+                SortList[J] := T;
               end;
             Inc(i);
-            Dec(j);
+            Dec(J);
           end;
-      until i > j;
-      if l < j then
-          QuickSortList(SortList, l, j);
-      l := i;
-    until i >= r;
+      until i > J;
+      if L < J then
+          QuickSortList(SortList, L, J);
+      L := i;
+    until i >= R;
   end;
 
 begin
@@ -3322,42 +3602,42 @@ begin
       QuickSortList(FList.ListData^, 0, Count - 1);
 end;
 
-procedure T2DPointList.Reverse;
+procedure TVec2List.Reverse;
 var
   NewList: TCoreClassList;
-  i, c   : Integer;
+  i, C: Integer;
 begin
   NewList := TCoreClassList.Create;
-  c := Count - 1;
-  NewList.Count := c + 1;
-  for i := c downto 0 do
-      NewList[c - i] := FList[i];
+  C := Count - 1;
+  NewList.Count := C + 1;
+  for i := C downto 0 do
+      NewList[C - i] := FList[i];
   DisposeObject(FList);
   FList := NewList;
 end;
 
-procedure T2DPointList.AddCirclePoint(ACount: Cardinal; axis: T2DPoint; ADist: TGeoFloat);
+procedure TVec2List.AddCirclePoint(aCount: Cardinal; Axis: TVec2; ADist: TGeoFloat);
 var
   i: Integer;
 begin
-  for i := 0 to ACount - 1 do
-      Add(PointRotation(axis, ADist, 360 / ACount * i));
+  for i := 0 to aCount - 1 do
+      Add(PointRotation(Axis, ADist, 360 / aCount * i));
 end;
 
-procedure T2DPointList.AddRectangle(r: T2DRect);
+procedure TVec2List.AddRectangle(R: TRectV2);
 begin
-  Add(r[0][0], r[0][1]);
-  Add(r[1][0], r[0][1]);
-  Add(r[1][0], r[1][1]);
-  Add(r[0][0], r[1][1]);
+  Add(R[0][0], R[0][1]);
+  Add(R[1][0], R[0][1]);
+  Add(R[1][0], R[1][1]);
+  Add(R[0][0], R[1][1]);
 end;
 
-function T2DPointList.GetMinimumFromPointToLine(const pt: T2DPoint; const ClosedMode: Boolean; out lb, le: Integer): T2DPoint;
+function TVec2List.GetMinimumFromPointToLine(const pt: TVec2; const ClosedMode: Boolean; out lb, le: Integer): TVec2;
 var
-  i       : Integer;
-  pt1, pt2: P2DPoint;
-  opt     : T2DPoint;
-  d, d2   : TGeoFloat;
+  i: Integer;
+  pt1, pt2: PVec2;
+  opt: TVec2;
+  d, d2: TGeoFloat;
 begin
   if FList.Count > 1 then
     begin
@@ -3410,12 +3690,12 @@ begin
     end;
 end;
 
-function T2DPointList.GetMinimumFromPointToLine(const pt: T2DPoint; const ClosedMode: Boolean): T2DPoint;
+function TVec2List.GetMinimumFromPointToLine(const pt: TVec2; const ClosedMode: Boolean): TVec2;
 var
-  i       : Integer;
-  pt1, pt2: P2DPoint;
-  opt     : T2DPoint;
-  d, d2   : TGeoFloat;
+  i: Integer;
+  pt1, pt2: PVec2;
+  opt: TVec2;
+  d, d2: TGeoFloat;
 begin
   if FList.Count > 1 then
     begin
@@ -3460,12 +3740,12 @@ begin
     end;
 end;
 
-function T2DPointList.GetMinimumFromPointToLine(const pt: T2DPoint; const ExpandDist: TGeoFloat): T2DPoint;
+function TVec2List.GetMinimumFromPointToLine(const pt: TVec2; const ExpandDist: TGeoFloat): TVec2;
 var
-  i       : Integer;
-  pt1, pt2: T2DPoint;
-  opt     : T2DPoint;
-  d, d2   : TGeoFloat;
+  i: Integer;
+  pt1, pt2: TVec2;
+  opt: TVec2;
+  d, d2: TGeoFloat;
 begin
   if FList.Count > 1 then
     begin
@@ -3508,7 +3788,7 @@ begin
     end;
 end;
 
-procedure T2DPointList.CutLineBeginPtToIdx(const pt: T2DPoint; const toidx: Integer);
+procedure TVec2List.CutLineBeginPtToIdx(const pt: TVec2; const toidx: Integer);
 var
   i: Integer;
 begin
@@ -3517,10 +3797,10 @@ begin
   Items[0]^ := pt;
 end;
 
-procedure T2DPointList.Translation(X, Y: TGeoFloat);
+procedure TVec2List.Transform(X, Y: TGeoFloat);
 var
   i: Integer;
-  p: P2DPoint;
+  p: PVec2;
 begin
   for i := 0 to Count - 1 do
     begin
@@ -3530,10 +3810,10 @@ begin
     end;
 end;
 
-procedure T2DPointList.Mul(X, Y: TGeoFloat);
+procedure TVec2List.Mul(X, Y: TGeoFloat);
 var
   i: Integer;
-  p: P2DPoint;
+  p: PVec2;
 begin
   for i := 0 to Count - 1 do
     begin
@@ -3543,7 +3823,20 @@ begin
     end;
 end;
 
-function T2DPointList.First: P2DPoint;
+procedure TVec2List.FDiv(X, Y: TGeoFloat);
+var
+  i: Integer;
+  p: PVec2;
+begin
+  for i := 0 to Count - 1 do
+    begin
+      p := Items[i];
+      p^[0] := p^[0] / X;
+      p^[1] := p^[1] / Y;
+    end;
+end;
+
+function TVec2List.First: PVec2;
 begin
   if Count > 0 then
       Result := Items[0]
@@ -3551,7 +3844,7 @@ begin
       Result := nil;
 end;
 
-function T2DPointList.Last: P2DPoint;
+function TVec2List.Last: PVec2;
 begin
   if Count > 0 then
       Result := Items[Count - 1]
@@ -3559,7 +3852,7 @@ begin
       Result := nil;
 end;
 
-procedure T2DPointList.ExpandDistanceAsList(ExpandDist: TGeoFloat; output: T2DPointList);
+procedure TVec2List.ExpandDistanceAsList(ExpandDist: TGeoFloat; output: TVec2List);
 var
   i: Integer;
 begin
@@ -3567,22 +3860,22 @@ begin
       output.Add(GetExpands(i, ExpandDist));
 end;
 
-procedure T2DPointList.ExpandConvexHullAsList(ExpandDist: TGeoFloat; output: T2DPointList);
+procedure TVec2List.ExpandConvexHullAsList(ExpandDist: TGeoFloat; output: TVec2List);
 var
-  pl: T2DPointList;
+  pl: TVec2List;
 begin
-  pl := T2DPointList.Create;
+  pl := TVec2List.Create;
   ConvexHull(pl);
   pl.ExpandDistanceAsList(ExpandDist, output);
   DisposeObject(pl);
 end;
 
-function T2DPointList.GetExpands(idx: Integer; ExpandDist: TGeoFloat): T2DPoint;
+function TVec2List.GetExpands(idx: Integer; ExpandDist: TGeoFloat): TVec2;
 var
-  lpt, pt, rpt: T2DPoint;
-  ln, rn      : T2DPoint;
-  dx, dy, F, r: TGeoFloat;
-  Cx, Cy      : TGeoFloat;
+  lpt, pt, rpt: TVec2;
+  ln, rn: TVec2;
+  dx, dy, F, R: TGeoFloat;
+  Cx, Cy: TGeoFloat;
 begin
   if (ExpandDist = 0) or (Count < 2) then
     begin
@@ -3617,17 +3910,17 @@ begin
   // compute the expand edge
   dx := (ln[0] + rn[0]);
   dy := (ln[1] + rn[1]);
-  r := (ln[0] * dx) + (ln[1] * dy);
-  if r = 0 then
-      r := 1;
-  Cx := (dx * ExpandDist / r);
-  Cy := (dy * ExpandDist / r);
+  R := (ln[0] * dx) + (ln[1] * dy);
+  if R = 0 then
+      R := 1;
+  Cx := (dx * ExpandDist / R);
+  Cy := (dy * ExpandDist / R);
 
   Result[0] := pt[0] + Cx;
   Result[1] := pt[1] + Cy;
 end;
 
-function TPoly.GetPoly(Index: Integer): PPolyPoint;
+function TPoly.GetPoly(index: Integer): PPolyPoint;
 begin
   Result := FList[index];
 end;
@@ -3663,7 +3956,7 @@ end;
 
 procedure TPoly.Assign(Source: TCoreClassPersistent);
 var
-  i    : Integer;
+  i: Integer;
   p, p2: PPolyPoint;
 begin
   if Source is TPoly then
@@ -3678,7 +3971,7 @@ begin
 
       for i := 0 to TPoly(Source).FList.Count - 1 do
         begin
-          New(p);
+          new(p);
           p2 := TPoly(Source).Poly[i];
           p^.Owner := Self;
           p^.angle := p2^.angle;
@@ -3686,20 +3979,20 @@ begin
           FList.Add(p);
         end;
     end
-  else if Source is T2DPointList then
+  else if Source is TVec2List then
     begin
-      RebuildPoly(T2DPointList(Source));
+      RebuildPoly(TVec2List(Source));
     end;
 end;
 
-procedure TPoly.AddPoint(pt: T2DPoint);
+procedure TPoly.AddPoint(pt: TVec2);
 begin
   AddPoint(pt[0], pt[1]);
 end;
 
 procedure TPoly.AddPoint(X, Y: TGeoFloat);
 var
-  pt: T2DPoint;
+  pt: TVec2;
 begin
   pt := PointMake(X, Y);
   Add(PointAngle(FPosition, pt), PointDistance(FPosition, pt));
@@ -3711,7 +4004,7 @@ var
 begin
   if ADist > FMaxRadius then
       FMaxRadius := ADist;
-  New(p);
+  new(p);
   p^.Owner := Self;
   p^.angle := AAngle - FAngle;
   p^.Dist := ADist / FScale;
@@ -3722,7 +4015,7 @@ procedure TPoly.Insert(idx: Integer; angle, Dist: TGeoFloat);
 var
   p: PPolyPoint;
 begin
-  New(p);
+  new(p);
   p^.Owner := Self;
   p^.angle := angle;
   p^.Dist := Dist;
@@ -3750,15 +4043,15 @@ begin
 end;
 
 procedure TPoly.CopyPoly(pl: TPoly; AReversed: Boolean);
-  procedure _Append(a, d: TGeoFloat);
+  procedure _Append(A, d: TGeoFloat);
   var
     p: PPolyPoint;
   begin
     if d > FMaxRadius then
         FMaxRadius := d;
-    New(p);
+    new(p);
     p^.Owner := Self;
-    p^.angle := a;
+    p^.angle := A;
     p^.Dist := d;
     FList.Add(p);
   end;
@@ -3807,13 +4100,13 @@ end;
 procedure TPoly.Reverse;
 var
   NewList: TCoreClassList;
-  i, c   : Integer;
+  i, C: Integer;
 begin
   NewList := TCoreClassList.Create;
-  c := Count - 1;
-  NewList.Count := c + 1;
-  for i := c downto 0 do
-      NewList[c - i] := FList[i];
+  C := Count - 1;
+  NewList.Count := C + 1;
+  for i := C downto 0 do
+      NewList[C - i] := FList[i];
   DisposeObject(FList);
   FList := NewList;
 end;
@@ -3838,15 +4131,15 @@ end;
 
 procedure TPoly.FixedSameError;
 var
-  l, p: PPolyPoint;
-  i   : Integer;
+  L, p: PPolyPoint;
+  i: Integer;
 begin
   if Count < 2 then
       Exit;
 
-  l := PPolyPoint(FList[0]);
+  L := PPolyPoint(FList[0]);
   p := PPolyPoint(FList[Count - 1]);
-  while (Count >= 2) and (IsEqual(p^.angle, l^.angle)) and (IsEqual(p^.Dist, l^.Dist)) do
+  while (Count >= 2) and (IsEqual(p^.angle, L^.angle)) and (IsEqual(p^.Dist, L^.Dist)) do
     begin
       Delete(Count - 1);
       p := PPolyPoint(FList[Count - 1]);
@@ -3855,22 +4148,22 @@ begin
   if Count < 2 then
       Exit;
 
-  l := PPolyPoint(FList[0]);
+  L := PPolyPoint(FList[0]);
   i := 1;
   while i < Count do
     begin
       p := PPolyPoint(FList[i]);
-      if (IsEqual(p^.angle, l^.angle)) and (IsEqual(p^.Dist, l^.Dist)) then
+      if (IsEqual(p^.angle, L^.angle)) and (IsEqual(p^.Dist, L^.Dist)) then
           Delete(i)
       else
         begin
-          l := p;
+          L := p;
           Inc(i);
         end;
     end;
 end;
 
-procedure TPoly.ConvexHullFromPoint(AFrom: T2DPointList);
+procedure TPoly.ConvexHullFromPoint(AFrom: TVec2List);
 
 const
   RightHandSide        = -1;
@@ -3888,10 +4181,10 @@ type
   TCompareResult = (eGreaterThan, eLessThan, eEqual);
 
 var
-  Point            : array of T2DHullPoint;
-  Stack            : array of T2DHullPoint;
+  Point: array of T2DHullPoint;
+  Stack: array of T2DHullPoint;
   StackHeadPosition: Integer;
-  Anchor           : T2DHullPoint;
+  Anchor: T2DHullPoint;
 
   function CartesianAngle(const X, Y: TGeoFloat): TGeoFloat; {$IFDEF INLINE_ASM} inline; {$ENDIF}
   const
@@ -3915,13 +4208,13 @@ var
         Result := Zero;
   end;
 
-  procedure Swap(i, j: Integer; var Point: array of T2DHullPoint);
+  procedure Swap(i, J: Integer; var Point: array of T2DHullPoint);
   var
-    temp: T2DHullPoint;
+    Temp: T2DHullPoint;
   begin
-    temp := Point[i];
-    Point[i] := Point[j];
-    Point[j] := temp;
+    Temp := Point[i];
+    Point[i] := Point[J];
+    Point[J] := Temp;
   end;
 
   function CompareAngles(const p1, p2: T2DHullPoint): TCompareResult;
@@ -3945,14 +4238,14 @@ var
 
   procedure RQSort(Left, Right: Integer; var Point: array of T2DHullPoint);
   var
-    i     : Integer;
-    j     : Integer;
+    i: Integer;
+    J: Integer;
     Middle: Integer;
-    Pivot : T2DHullPoint;
+    Pivot: T2DHullPoint;
   begin
     repeat
       i := Left;
-      j := Right;
+      J := Right;
       Middle := (Left + Right) div 2;
       (* Median of 3 Pivot Selection *)
       if CompareAngles(Point[Middle], Point[Left]) = eLessThan then
@@ -3965,17 +4258,17 @@ var
       repeat
         while CompareAngles(Point[i], Pivot) = eLessThan do
             Inc(i);
-        while CompareAngles(Point[j], Pivot) = eGreaterThan do
-            Dec(j);
-        if i <= j then
+        while CompareAngles(Point[J], Pivot) = eGreaterThan do
+            Dec(J);
+        if i <= J then
           begin
-            Swap(i, j, Point);
+            Swap(i, J, Point);
             Inc(i);
-            Dec(j);
+            Dec(J);
           end;
-      until i > j;
-      if Left < j then
-          RQSort(Left, j, Point);
+      until i > J;
+      if Left < J then
+          RQSort(Left, J, Point);
       Left := i;
     until i >= Right;
   end;
@@ -3998,13 +4291,13 @@ var
 
   function Head: T2DHullPoint;
   begin
-    Assert((StackHeadPosition >= 0) and (StackHeadPosition < Length(Stack)), 'Invalid stack-head position.');
+    Assert((StackHeadPosition >= 0) and (StackHeadPosition < length(Stack)), 'Invalid stack-head position.');
     Result := Stack[StackHeadPosition];
   end;
 
   function PreHead: T2DHullPoint;
   begin
-    Assert(((StackHeadPosition - 1) >= 0) and ((StackHeadPosition - 1) < Length(Stack)), 'Invalid pre stack-head position.');
+    Assert(((StackHeadPosition - 1) >= 0) and ((StackHeadPosition - 1) < length(Stack)), 'Invalid pre stack-head position.');
     Result := Stack[StackHeadPosition - 1];
   end;
 
@@ -4034,13 +4327,13 @@ var
 
   procedure GrahamScan;
   var
-    i   : Integer;
+    i: Integer;
     Orin: Integer;
   begin
     Push(Point[0]);
     Push(Point[1]);
     i := 2;
-    while i < Length(Point) do
+    while i < length(Point) do
       begin
         if PreHeadExist then
           begin
@@ -4061,25 +4354,25 @@ var
       end;
   end;
 
-  function CalcCentroid: T2DPoint;
+  function CalcCentroid: TVec2;
   var
-    i   : Integer;
-    j   : Integer;
+    i: Integer;
+    J: Integer;
     asum: TGeoFloat;
     term: TGeoFloat;
   begin
     Result := NULLPoint;
 
     asum := Zero;
-    j := StackHeadPosition;
+    J := StackHeadPosition;
 
     for i := 0 to StackHeadPosition do
       begin
-        term := ((Stack[j].X * Stack[i].Y) - (Stack[j].Y * Stack[i].X));
+        term := ((Stack[J].X * Stack[i].Y) - (Stack[J].Y * Stack[i].X));
         asum := asum + term;
-        Result[0] := Result[0] + (Stack[j].X + Stack[i].X) * term;
-        Result[1] := Result[1] + (Stack[j].Y + Stack[i].Y) * term;
-        j := i;
+        Result[0] := Result[0] + (Stack[J].X + Stack[i].X) * term;
+        Result[1] := Result[1] + (Stack[J].Y + Stack[i].Y) * term;
+        J := i;
       end;
 
     if NotEqual(asum, Zero) then
@@ -4090,9 +4383,9 @@ var
   end;
 
 var
-  i : Integer;
-  j : Integer;
-  pt: T2DPoint;
+  i: Integer;
+  J: Integer;
+  pt: TVec2;
 begin
   if AFrom.Count <= 3 then
       Exit;
@@ -4102,28 +4395,28 @@ begin
   try
     SetLength(Point, AFrom.Count);
     SetLength(Stack, AFrom.Count);
-    j := 0;
+    J := 0;
     for i := 0 to AFrom.Count - 1 do
       begin
         pt := AFrom[i]^;
         Point[i].X := pt[0];
         Point[i].Y := pt[1];
         Point[i].Ang := 0.0;
-        if Point[i].Y < Point[j].Y then
-            j := i
-        else if Point[i].Y = Point[j].Y then
-          if Point[i].X < Point[j].X then
-              j := i;
+        if Point[i].Y < Point[J].Y then
+            J := i
+        else if Point[i].Y = Point[J].Y then
+          if Point[i].X < Point[J].X then
+              J := i;
       end;
 
-    Swap(0, j, Point);
+    Swap(0, J, Point);
     Point[0].Ang := 0;
     Anchor := Point[0];
     (* Calculate angle of the vertex ([ith point]-[anchorpoint]-[most left point]) *)
-    for i := 1 to Length(Point) - 1 do
+    for i := 1 to length(Point) - 1 do
         Point[i].Ang := CartesianAngle(Point[i].X - Anchor.X, Point[i].Y - Anchor.Y);
     (* Sort points in ascending order according to their angles *)
-    RQSort(1, Length(Point) - 1, Point);
+    RQSort(1, length(Point) - 1, Point);
     GrahamScan;
 
     { * make Circle * }
@@ -4148,9 +4441,9 @@ begin
   RebuildPoly;
 end;
 
-procedure TPoly.RebuildPoly(pl: T2DPointList);
+procedure TPoly.RebuildPoly(pl: TVec2List);
 var
-  i  : Integer;
+  i: Integer;
   Ply: TPoly;
 begin
   { * rebuild opt * }
@@ -4178,22 +4471,22 @@ end;
 
 procedure TPoly.RebuildPoly;
 var
-  pl: T2DPointList;
-  i : Integer;
+  pl: TVec2List;
+  i: Integer;
 begin
-  pl := T2DPointList.Create;
+  pl := TVec2List.Create;
   for i := 0 to Count - 1 do
       pl.Add(GetPoint(i));
   RebuildPoly(pl);
   DisposeObject(pl);
 end;
 
-procedure TPoly.RebuildPoly(AScale, AAngle: TGeoFloat; AExpandMode: TExpandMode; APosition: T2DPoint);
+procedure TPoly.RebuildPoly(AScale, AAngle: TGeoFloat; AExpandMode: TExpandMode; APosition: TVec2);
 var
-  pl: T2DPointList;
-  i : Integer;
+  pl: TVec2List;
+  i: Integer;
 begin
-  pl := T2DPointList.Create;
+  pl := TVec2List.Create;
   for i := 0 to Count - 1 do
       pl.Add(GetPoint(i));
   Scale := AScale;
@@ -4204,16 +4497,16 @@ begin
   DisposeObject(pl);
 end;
 
-function TPoly.BoundRect: T2DRect;
+function TPoly.BoundRect: TRectV2;
 var
-  p   : T2DPoint;
+  p: TVec2;
   MaxX: TGeoFloat;
   MaxY: TGeoFloat;
   MinX: TGeoFloat;
   MinY: TGeoFloat;
-  i   : Integer;
+  i: Integer;
 begin
-  Result := Make2DRect(Zero, Zero, Zero, Zero);
+  Result := MakeRectV2(Zero, Zero, Zero, Zero);
   if Count < 2 then
       Exit;
   p := Points[0];
@@ -4234,16 +4527,16 @@ begin
       else if p[1] > MaxY then
           MaxY := p[1];
     end;
-  Result := Make2DRect(MinX, MinY, MaxX, MaxY);
+  Result := MakeRectV2(MinX, MinY, MaxX, MaxY);
 end;
 
-function TPoly.Centroid: T2DPoint;
+function TPoly.Centroid: TVec2;
 var
-  i   : Integer;
+  i: Integer;
   asum: TGeoFloat;
   term: TGeoFloat;
 
-  pt1, pt2: T2DPoint;
+  pt1, pt2: TVec2;
 begin
   Result := NULLPoint;
 
@@ -4271,10 +4564,10 @@ begin
     end;
 end;
 
-function TPoly.PointInHere(pt: T2DPoint): Boolean;
+function TPoly.PointInHere(pt: TVec2): Boolean;
 var
-  i     : Integer;
-  pi, pj: T2DPoint;
+  i: Integer;
+  pi, pj: TVec2;
 begin
   Result := False;
   if Count < 3 then
@@ -4296,15 +4589,15 @@ begin
     end;
 end;
 
-function TPoly.LineNearIntersect(const lb, le: T2DPoint; const ClosedPolyMode: Boolean; out idx1, idx2: Integer; out IntersectPt: T2DPoint): Boolean;
+function TPoly.LineNearIntersect(const lb, le: TVec2; const ClosedPolyMode: Boolean; out idx1, idx2: Integer; out IntersectPt: TVec2): Boolean;
 var
-  i       : Integer;
-  pt1, pt2: T2DPoint;
-  opt     : T2DPoint;
-  d, d2   : TGeoFloat;
+  i: Integer;
+  pt1, pt2: TVec2;
+  opt: TVec2;
+  d, d2: TGeoFloat;
 begin
   Result := False;
-  if not Check_Circle2Line(FPosition, FMaxRadius * FScale, lb, le) then
+  if not Detect_Circle2Line(FPosition, FMaxRadius * FScale, lb, le) then
       Exit;
 
   if FList.Count > 1 then
@@ -4347,13 +4640,13 @@ begin
     end;
 end;
 
-function TPoly.LineIntersect(const lb, le: T2DPoint; const ClosedPolyMode: Boolean): Boolean;
+function TPoly.LineIntersect(const lb, le: TVec2; const ClosedPolyMode: Boolean): Boolean;
 var
-  i       : Integer;
-  pt1, pt2: T2DPoint;
+  i: Integer;
+  pt1, pt2: TVec2;
 begin
   Result := False;
-  if not Check_Circle2Line(FPosition, FMaxRadius * FScale, lb, le) then
+  if not Detect_Circle2Line(FPosition, FMaxRadius * FScale, lb, le) then
       Exit;
 
   if FList.Count > 1 then
@@ -4378,12 +4671,12 @@ begin
     end;
 end;
 
-function TPoly.GetMinimumFromPointToPoly(const pt: T2DPoint; const ClosedPolyMode: Boolean; out lb, le: Integer): T2DPoint;
+function TPoly.GetMinimumFromPointToPoly(const pt: TVec2; const ClosedPolyMode: Boolean; out lb, le: Integer): TVec2;
 var
-  i       : Integer;
-  pt1, pt2: T2DPoint;
-  opt     : T2DPoint;
-  d, d2   : TGeoFloat;
+  i: Integer;
+  pt1, pt2: TVec2;
+  opt: TVec2;
+  d, d2: TGeoFloat;
 begin
   if FList.Count > 1 then
     begin
@@ -4436,10 +4729,10 @@ begin
     end;
 end;
 
-function TPoly.PointInHere(AExpandDistance: TGeoFloat; pt: T2DPoint): Boolean;
+function TPoly.PointInHere(AExpandDistance: TGeoFloat; pt: TVec2): Boolean;
 var
-  i     : Integer;
-  pi, pj: T2DPoint;
+  i: Integer;
+  pi, pj: TVec2;
 begin
   Result := False;
   if Count < 3 then
@@ -4461,15 +4754,15 @@ begin
     end;
 end;
 
-function TPoly.LineNearIntersect(AExpandDistance: TGeoFloat; const lb, le: T2DPoint; const ClosedPolyMode: Boolean; out idx1, idx2: Integer; out IntersectPt: T2DPoint): Boolean;
+function TPoly.LineNearIntersect(AExpandDistance: TGeoFloat; const lb, le: TVec2; const ClosedPolyMode: Boolean; out idx1, idx2: Integer; out IntersectPt: TVec2): Boolean;
 var
-  i       : Integer;
-  pt1, pt2: T2DPoint;
-  opt     : T2DPoint;
-  d, d2   : TGeoFloat;
+  i: Integer;
+  pt1, pt2: TVec2;
+  opt: TVec2;
+  d, d2: TGeoFloat;
 begin
   Result := False;
-  if not Check_Circle2Line(FPosition, FMaxRadius * FScale + AExpandDistance, lb, le) then
+  if not Detect_Circle2Line(FPosition, FMaxRadius * FScale + AExpandDistance, lb, le) then
       Exit;
 
   if FList.Count > 1 then
@@ -4512,13 +4805,13 @@ begin
     end;
 end;
 
-function TPoly.LineIntersect(AExpandDistance: TGeoFloat; const lb, le: T2DPoint; const ClosedPolyMode: Boolean): Boolean;
+function TPoly.LineIntersect(AExpandDistance: TGeoFloat; const lb, le: TVec2; const ClosedPolyMode: Boolean): Boolean;
 var
-  i       : Integer;
-  pt1, pt2: T2DPoint;
+  i: Integer;
+  pt1, pt2: TVec2;
 begin
   Result := False;
-  if not Check_Circle2Line(FPosition, FMaxRadius * FScale + AExpandDistance, lb, le) then
+  if not Detect_Circle2Line(FPosition, FMaxRadius * FScale + AExpandDistance, lb, le) then
       Exit;
 
   if FList.Count > 1 then
@@ -4543,12 +4836,12 @@ begin
     end;
 end;
 
-function TPoly.GetMinimumFromPointToPoly(AExpandDistance: TGeoFloat; const pt: T2DPoint; const ClosedPolyMode: Boolean; out lb, le: Integer): T2DPoint;
+function TPoly.GetMinimumFromPointToPoly(AExpandDistance: TGeoFloat; const pt: TVec2; const ClosedPolyMode: Boolean; out lb, le: Integer): TVec2;
 var
-  i       : Integer;
-  pt1, pt2: T2DPoint;
-  opt     : T2DPoint;
-  d, d2   : TGeoFloat;
+  i: Integer;
+  pt1, pt2: TVec2;
+  opt: TVec2;
+  d, d2: TGeoFloat;
 begin
   if FList.Count > 1 then
     begin
@@ -4599,42 +4892,42 @@ begin
     end;
 end;
 
-function TPoly.Collision2Circle(cp: T2DPoint; r: TGeoFloat; ClosedPolyMode: Boolean): Boolean;
+function TPoly.Collision2Circle(cp: TVec2; R: TGeoFloat; ClosedPolyMode: Boolean): Boolean;
 var
-  i            : Integer;
-  curpt, destpt: T2DPoint;
+  i: Integer;
+  curpt, destpt: TVec2;
 begin
-  if (Check_Circle2Circle(FPosition, cp, FMaxRadius * FScale, r)) and (Count > 0) then
+  if (Detect_Circle2Circle(FPosition, cp, FMaxRadius * FScale, R)) and (Count > 0) then
     begin
       Result := True;
       curpt := Points[0];
       for i := 1 to Count - 1 do
         begin
           destpt := Points[i];
-          if Check_Circle2Line(cp, r, curpt, destpt) then
+          if Detect_Circle2Line(cp, R, curpt, destpt) then
               Exit;
           curpt := destpt;
         end;
       if ClosedPolyMode then
-        if Check_Circle2Line(cp, r, curpt, Points[0]) then
+        if Detect_Circle2Line(cp, R, curpt, Points[0]) then
             Exit;
     end;
   Result := False;
 end;
 
-function TPoly.Collision2Circle(cp: T2DPoint; r: TGeoFloat; ClosedPolyMode: Boolean; OutputLine: T2DLineList): Boolean;
+function TPoly.Collision2Circle(cp: TVec2; R: TGeoFloat; ClosedPolyMode: Boolean; OutputLine: T2DLineList): Boolean;
 var
-  i            : Integer;
-  curpt, destpt: T2DPoint;
+  i: Integer;
+  curpt, destpt: TVec2;
 begin
   Result := False;
-  if (Check_Circle2Circle(FPosition, cp, FMaxRadius * FScale, r)) and (Count > 0) then
+  if (Detect_Circle2Circle(FPosition, cp, FMaxRadius * FScale, R)) and (Count > 0) then
     begin
       curpt := Points[0];
       for i := 1 to Count - 1 do
         begin
           destpt := Points[i];
-          if Check_Circle2Line(cp, r, curpt, destpt) then
+          if Detect_Circle2Line(cp, R, curpt, destpt) then
             begin
               OutputLine.Add(curpt, destpt, i - 1, i, Self);
               Result := True;
@@ -4642,7 +4935,7 @@ begin
           curpt := destpt;
         end;
       if ClosedPolyMode then
-        if Check_Circle2Line(cp, r, curpt, Points[0]) then
+        if Detect_Circle2Line(cp, R, curpt, Points[0]) then
           begin
             OutputLine.Add(curpt, Points[0], Count - 1, 0, Self);
             Result := True;
@@ -4650,19 +4943,19 @@ begin
     end;
 end;
 
-function TPoly.Collision2Circle(AExpandDistance: TGeoFloat; cp: T2DPoint; r: TGeoFloat; ClosedPolyMode: Boolean; OutputLine: T2DLineList): Boolean;
+function TPoly.Collision2Circle(AExpandDistance: TGeoFloat; cp: TVec2; R: TGeoFloat; ClosedPolyMode: Boolean; OutputLine: T2DLineList): Boolean;
 var
-  i            : Integer;
-  curpt, destpt: T2DPoint;
+  i: Integer;
+  curpt, destpt: TVec2;
 begin
   Result := False;
-  if (Check_Circle2Circle(FPosition, cp, FMaxRadius * FScale + AExpandDistance, r)) and (Count > 0) then
+  if (Detect_Circle2Circle(FPosition, cp, FMaxRadius * FScale + AExpandDistance, R)) and (Count > 0) then
     begin
       curpt := Expands[0, AExpandDistance];
       for i := 1 to Count - 1 do
         begin
           destpt := Expands[i, AExpandDistance];
-          if Check_Circle2Line(cp, r, curpt, destpt) then
+          if Detect_Circle2Line(cp, R, curpt, destpt) then
             begin
               OutputLine.Add(curpt, destpt, i - 1, i, Self);
               Result := True;
@@ -4670,7 +4963,7 @@ begin
           curpt := destpt;
         end;
       if ClosedPolyMode then
-        if Check_Circle2Line(cp, r, curpt, Expands[0, AExpandDistance]) then
+        if Detect_Circle2Line(cp, R, curpt, Expands[0, AExpandDistance]) then
           begin
             OutputLine.Add(curpt, Expands[0, AExpandDistance], Count - 1, 0, Self);
             Result := True;
@@ -4682,7 +4975,7 @@ function TPoly.PolyIntersect(APoly: TPoly): Boolean;
 var
   i: Integer;
 begin
-  Result := Check_Circle2Circle(Position, APoly.Position, MaxRadius * FScale, APoly.MaxRadius * APoly.Scale);
+  Result := Detect_Circle2Circle(Position, APoly.Position, MaxRadius * FScale, APoly.MaxRadius * APoly.Scale);
   if not Result then
       Exit;
 
@@ -4697,7 +4990,7 @@ begin
   Result := False;
 end;
 
-function TPoly.LerpToOfEndge(pt: T2DPoint; AProjDistance, AExpandDistance: TGeoFloat; FromIdx, toidx: Integer): T2DPoint;
+function TPoly.LerpToEndge(pt: TVec2; AProjDistance, AExpandDistance: TGeoFloat; FromIdx, toidx: Integer): TVec2;
   function NextIndexStep(CurIdx: Integer; curDir: ShortInt): Integer;
   begin
     if curDir < 0 then
@@ -4724,8 +5017,8 @@ function TPoly.LerpToOfEndge(pt: T2DPoint; AProjDistance, AExpandDistance: TGeoF
 
 var
   idxDir: ShortInt;
-  ToPt  : T2DPoint;
-  d     : TGeoFloat;
+  ToPt: TVec2;
+  d: TGeoFloat;
 begin
   Result := pt;
   if Count <= 1 then
@@ -4760,7 +5053,7 @@ begin
     end;
 end;
 
-function TPoly.GetPoint(idx: Integer): T2DPoint;
+function TPoly.GetPoint(idx: Integer): TVec2;
 var
   p: PPolyPoint;
 begin
@@ -4768,7 +5061,7 @@ begin
   Result := PointRotation(FPosition, p^.Dist * FScale, p^.angle + FAngle);
 end;
 
-procedure TPoly.SetPoint(idx: Integer; Value: T2DPoint);
+procedure TPoly.SetPoint(idx: Integer; Value: TVec2);
 var
   p: PPolyPoint;
 begin
@@ -4780,12 +5073,12 @@ begin
   p^.Dist := p^.Dist / FScale;
 end;
 
-function TPoly.GetExpands(idx: Integer; ExpandDist: TGeoFloat): T2DPoint;
+function TPoly.GetExpands(idx: Integer; ExpandDist: TGeoFloat): TVec2;
 var
-  lpt, pt, rpt: T2DPoint;
-  ln, rn      : T2DPoint;
-  dx, dy, F, r: TGeoFloat;
-  Cx, Cy      : TGeoFloat;
+  lpt, pt, rpt: TVec2;
+  ln, rn: TVec2;
+  dx, dy, F, R: TGeoFloat;
+  Cx, Cy: TGeoFloat;
 begin
   if (ExpandDist = 0) or (Count < 2) then
     begin
@@ -4820,11 +5113,11 @@ begin
   // compute the expand edge
   dx := (ln[0] + rn[0]);
   dy := (ln[1] + rn[1]);
-  r := (ln[0] * dx) + (ln[1] * dy);
-  if r = 0 then
-      r := 1;
-  Cx := (dx * ExpandDist / r);
-  Cy := (dy * ExpandDist / r);
+  R := (ln[0] * dx) + (ln[1] * dy);
+  if R = 0 then
+      R := 1;
+  Cx := (dx * ExpandDist / R);
+  Cy := (dy * ExpandDist / R);
 
   if FExpandMode = emConcave then
     begin
@@ -4838,62 +5131,60 @@ begin
     end;
 end;
 
-procedure TPoly.SaveToStream(Stream: TCoreClassStream);
+procedure TPoly.SaveToStream(stream: TCoreClassStream);
 var
-  w: TDataFrameEngine;
+  w: TWriter;
   i: Integer;
   p: PPolyPoint;
 begin
-  w := TDataFrameEngine.Create;
+  w := TWriter.Create(stream, 8192);
   w.WriteSingle(FScale);
   w.WriteSingle(FAngle);
   w.WriteSingle(FPosition[0]);
   w.WriteSingle(FPosition[1]);
-  w.writeInteger(Count);
+  w.WriteInteger(Count);
   for i := 0 to Count - 1 do
     begin
       p := GetPoly(i);
       w.WriteSingle(p^.angle);
       w.WriteSingle(p^.Dist);
     end;
-  w.EncodeTo(Stream);
   DisposeObject(w);
 end;
 
-procedure TPoly.LoadFromStream(Stream: TCoreClassStream);
+procedure TPoly.LoadFromStream(stream: TCoreClassStream);
 var
-  r: TDataFrameEngine;
-  c: Integer;
+  R: TReader;
+  C: Integer;
   i: Integer;
-  procedure _Append(a, d: TGeoFloat);
+  procedure _Append(A, d: TGeoFloat);
   var
     p: PPolyPoint;
   begin
     if d > FMaxRadius then
         FMaxRadius := d;
-    New(p);
+    new(p);
     p^.Owner := Self;
-    p^.angle := a;
+    p^.angle := A;
     p^.Dist := d;
     FList.Add(p);
   end;
 
 begin
   Clear;
-  r := TDataFrameEngine.Create;
-  r.DecodeFrom(Stream);
-  FScale := r.Reader.ReadSingle;
-  FAngle := r.Reader.ReadSingle;
-  FPosition[0] := r.Reader.ReadSingle;
-  FPosition[1] := r.Reader.ReadSingle;
+  R := TReader.Create(stream, 8192);
+  FScale := R.ReadSingle;
+  FAngle := R.ReadSingle;
+  FPosition[0] := R.ReadSingle;
+  FPosition[1] := R.ReadSingle;
   FMaxRadius := 0;
-  c := r.Reader.ReadInteger;
-  for i := 0 to c - 1 do
-      _Append(r.Reader.ReadSingle, r.Reader.ReadSingle);
-  DisposeObject(r);
+  C := R.ReadInteger;
+  for i := 0 to C - 1 do
+      _Append(R.ReadSingle, R.ReadSingle);
+  DisposeObject(R);
 end;
 
-function T2DLineList.GetItems(Index: Integer): P2DLine;
+function T2DLineList.GetItems(index: Integer): P2DLine;
 begin
   Result := FList[index];
 end;
@@ -4929,38 +5220,38 @@ function T2DLineList.Add(v: T2DLine): Integer;
 var
   p: P2DLine;
 begin
-  New(p);
+  new(p);
   p^ := v;
   Result := FList.Add(p);
-  p^.Index := Result;
+  p^.index := Result;
 end;
 
-function T2DLineList.Add(lb, le: T2DPoint): Integer;
+function T2DLineList.Add(lb, le: TVec2): Integer;
 var
   p: P2DLine;
 begin
-  New(p);
-  p^.Buff[0] := lb;
-  p^.Buff[1] := le;
+  new(p);
+  p^.buff[0] := lb;
+  p^.buff[1] := le;
   p^.PolyIndex[0] := -1;
   p^.PolyIndex[1] := -1;
   p^.Poly := nil;
   Result := FList.Add(p);
-  p^.Index := Result;
+  p^.index := Result;
 end;
 
-function T2DLineList.Add(lb, le: T2DPoint; idx1, idx2: Integer; Poly: TPoly): Integer;
+function T2DLineList.Add(lb, le: TVec2; idx1, idx2: Integer; Poly: TPoly): Integer;
 var
   p: P2DLine;
 begin
-  New(p);
-  p^.Buff[0] := lb;
-  p^.Buff[1] := le;
+  new(p);
+  p^.buff[0] := lb;
+  p^.buff[1] := le;
   p^.PolyIndex[0] := idx1;
   p^.PolyIndex[1] := idx2;
   p^.Poly := Poly;
   Result := FList.Add(p);
-  p^.Index := Result;
+  p^.index := Result;
 end;
 
 function T2DLineList.Count: Integer;
@@ -4968,7 +5259,7 @@ begin
   Result := FList.Count;
 end;
 
-procedure T2DLineList.Delete(Index: Integer);
+procedure T2DLineList.Delete(index: Integer);
 var
   p: P2DLine;
   i: Integer;
@@ -4977,7 +5268,7 @@ begin
   Dispose(p);
   FList.Delete(index);
   for i := index to Count - 1 do
-      Items[i]^.Index := i;
+      Items[i]^.index := i;
 end;
 
 procedure T2DLineList.Clear;
@@ -4989,11 +5280,11 @@ begin
   FList.Clear;
 end;
 
-function T2DLineList.NearLine(const ExpandDist: TGeoFloat; const pt: T2DPoint): P2DLine;
+function T2DLineList.NearLine(const ExpandDist: TGeoFloat; const pt: TVec2): P2DLine;
 var
   d, d2: TGeoFloat;
-  l    : P2DLine;
-  i    : Integer;
+  L: P2DLine;
+  i: Integer;
 begin
   Result := nil;
   if Count = 1 then
@@ -5002,66 +5293,66 @@ begin
     end
   else if Count > 1 then
     begin
-      l := Items[0];
+      L := Items[0];
       if ExpandDist = 0 then
-          d := l^.MinimumDistance(pt)
+          d := L^.MinimumDistance(pt)
       else
-          d := l^.MinimumDistance(ExpandDist, pt);
-      Result := l;
+          d := L^.MinimumDistance(ExpandDist, pt);
+      Result := L;
 
       for i := 1 to Count - 1 do
         begin
-          l := Items[i];
+          L := Items[i];
 
           if ExpandDist = 0 then
-              d2 := l^.MinimumDistance(pt)
+              d2 := L^.MinimumDistance(pt)
           else
-              d2 := l^.MinimumDistance(ExpandDist, pt);
+              d2 := L^.MinimumDistance(ExpandDist, pt);
 
           if d2 < d then
             begin
-              Result := l;
+              Result := L;
               d := d2;
             end;
         end;
     end;
 end;
 
-function T2DLineList.FarLine(const ExpandDist: TGeoFloat; const pt: T2DPoint): P2DLine;
+function T2DLineList.FarLine(const ExpandDist: TGeoFloat; const pt: TVec2): P2DLine;
 var
   d, d2: TGeoFloat;
-  l    : P2DLine;
-  i    : Integer;
+  L: P2DLine;
+  i: Integer;
 begin
   Result := nil;
   if Count > 0 then
     begin
-      l := Items[0];
+      L := Items[0];
       if ExpandDist = 0 then
-          d := l^.MinimumDistance(pt)
+          d := L^.MinimumDistance(pt)
       else
-          d := l^.MinimumDistance(ExpandDist, pt);
-      Result := l;
+          d := L^.MinimumDistance(ExpandDist, pt);
+      Result := L;
 
       for i := 1 to Count - 1 do
         begin
-          l := Items[i];
+          L := Items[i];
 
           if ExpandDist = 0 then
-              d2 := l^.MinimumDistance(pt)
+              d2 := L^.MinimumDistance(pt)
           else
-              d2 := l^.MinimumDistance(ExpandDist, pt);
+              d2 := L^.MinimumDistance(ExpandDist, pt);
 
           if d2 > d then
             begin
-              Result := l;
+              Result := L;
               d := d2;
             end;
         end;
     end;
 end;
 
-procedure T2DLineList.SortOfNear(const pt: T2DPoint);
+procedure T2DLineList.SortOfNear(const pt: TVec2);
 
   function ListSortCompare(Item1, Item2: Pointer): Integer;
   var
@@ -5072,36 +5363,36 @@ procedure T2DLineList.SortOfNear(const pt: T2DPoint);
     Result := CompareValue(d1, d2);
   end;
 
-  procedure QuickSortList(var SortList: TCoreClassPointerList; l, r: Integer); {$IFDEF INLINE_ASM} inline; {$ENDIF}
+  procedure QuickSortList(var SortList: TCoreClassPointerList; L, R: Integer); {$IFDEF INLINE_ASM} inline; {$ENDIF}
   var
-    i, j: Integer;
-    p, t: Pointer;
+    i, J: Integer;
+    p, T: Pointer;
   begin
     repeat
-      i := l;
-      j := r;
-      p := SortList[(l + r) shr 1];
+      i := L;
+      J := R;
+      p := SortList[(L + R) shr 1];
       repeat
         while ListSortCompare(SortList[i], p) < 0 do
             Inc(i);
-        while ListSortCompare(SortList[j], p) > 0 do
-            Dec(j);
-        if i <= j then
+        while ListSortCompare(SortList[J], p) > 0 do
+            Dec(J);
+        if i <= J then
           begin
-            if i <> j then
+            if i <> J then
               begin
-                t := SortList[i];
-                SortList[i] := SortList[j];
-                SortList[j] := t;
+                T := SortList[i];
+                SortList[i] := SortList[J];
+                SortList[J] := T;
               end;
             Inc(i);
-            Dec(j);
+            Dec(J);
           end;
-      until i > j;
-      if l < j then
-          QuickSortList(SortList, l, j);
-      l := i;
-    until i >= r;
+      until i > J;
+      if L < J then
+          QuickSortList(SortList, L, J);
+      L := i;
+    until i >= R;
   end;
 
 var
@@ -5110,10 +5401,10 @@ begin
   if Count > 1 then
       QuickSortList(FList.ListData^, 0, Count - 1);
   for i := 0 to Count - 1 do
-      Items[i]^.Index := i;
+      Items[i]^.index := i;
 end;
 
-procedure T2DLineList.SortOfFar(const pt: T2DPoint);
+procedure T2DLineList.SortOfFar(const pt: TVec2);
 
   function ListSortCompare(Item1, Item2: Pointer): Integer;
   var
@@ -5124,36 +5415,36 @@ procedure T2DLineList.SortOfFar(const pt: T2DPoint);
     Result := CompareValue(d2, d1);
   end;
 
-  procedure QuickSortList(var SortList: TCoreClassPointerList; l, r: Integer);
+  procedure QuickSortList(var SortList: TCoreClassPointerList; L, R: Integer);
   var
-    i, j: Integer;
-    p, t: Pointer;
+    i, J: Integer;
+    p, T: Pointer;
   begin
     repeat
-      i := l;
-      j := r;
-      p := SortList[(l + r) shr 1];
+      i := L;
+      J := R;
+      p := SortList[(L + R) shr 1];
       repeat
         while ListSortCompare(SortList[i], p) < 0 do
             Inc(i);
-        while ListSortCompare(SortList[j], p) > 0 do
-            Dec(j);
-        if i <= j then
+        while ListSortCompare(SortList[J], p) > 0 do
+            Dec(J);
+        if i <= J then
           begin
-            if i <> j then
+            if i <> J then
               begin
-                t := SortList[i];
-                SortList[i] := SortList[j];
-                SortList[j] := t;
+                T := SortList[i];
+                SortList[i] := SortList[J];
+                SortList[J] := T;
               end;
             Inc(i);
-            Dec(j);
+            Dec(J);
           end;
-      until i > j;
-      if l < j then
-          QuickSortList(SortList, l, j);
-      l := i;
-    until i >= r;
+      until i > J;
+      if L < J then
+          QuickSortList(SortList, L, J);
+      L := i;
+    until i >= R;
   end;
 
 var
@@ -5162,10 +5453,10 @@ begin
   if Count > 1 then
       QuickSortList(FList.ListData^, 0, Count - 1);
   for i := 0 to Count - 1 do
-      Items[i]^.Index := i;
+      Items[i]^.index := i;
 end;
 
-function T2DCircleList.GetItems(Index: Integer): P2DCircle;
+function T2DCircleList.GetItems(index: Integer): P2DCircle;
 begin
   Result := FList[index];
 end;
@@ -5199,16 +5490,16 @@ function T2DCircleList.Add(const v: T2DCircle): Integer;
 var
   p: P2DCircle;
 begin
-  New(p);
+  new(p);
   p^ := v;
   Result := FList.Add(p);
 end;
 
-function T2DCircleList.Add(const Position: T2DPoint; const radius: TGeoFloat; const UserData: TCoreClassObject): Integer;
+function T2DCircleList.Add(const Position: TVec2; const radius: TGeoFloat; const UserData: TCoreClassObject): Integer;
 var
   p: P2DCircle;
 begin
-  New(p);
+  new(p);
   p^.Position := Position;
   p^.radius := radius;
   p^.UserData := UserData;
@@ -5229,7 +5520,7 @@ begin
   FList.Clear;
 end;
 
-procedure T2DCircleList.Delete(Index: Integer);
+procedure T2DCircleList.Delete(index: Integer);
 var
   p: P2DCircle;
 begin
@@ -5249,36 +5540,36 @@ procedure T2DCircleList.SortOfMinRadius;
     Result := CompareValue(d1, d2);
   end;
 
-  procedure QuickSortList(var SortList: TCoreClassPointerList; l, r: Integer); {$IFDEF INLINE_ASM} inline; {$ENDIF}
+  procedure QuickSortList(var SortList: TCoreClassPointerList; L, R: Integer); {$IFDEF INLINE_ASM} inline; {$ENDIF}
   var
-    i, j: Integer;
-    p, t: Pointer;
+    i, J: Integer;
+    p, T: Pointer;
   begin
     repeat
-      i := l;
-      j := r;
-      p := SortList[(l + r) shr 1];
+      i := L;
+      J := R;
+      p := SortList[(L + R) shr 1];
       repeat
         while ListSortCompare(SortList[i], p) < 0 do
             Inc(i);
-        while ListSortCompare(SortList[j], p) > 0 do
-            Dec(j);
-        if i <= j then
+        while ListSortCompare(SortList[J], p) > 0 do
+            Dec(J);
+        if i <= J then
           begin
-            if i <> j then
+            if i <> J then
               begin
-                t := SortList[i];
-                SortList[i] := SortList[j];
-                SortList[j] := t;
+                T := SortList[i];
+                SortList[i] := SortList[J];
+                SortList[J] := T;
               end;
             Inc(i);
-            Dec(j);
+            Dec(J);
           end;
-      until i > j;
-      if l < j then
-          QuickSortList(SortList, l, j);
-      l := i;
-    until i >= r;
+      until i > J;
+      if L < J then
+          QuickSortList(SortList, L, J);
+      L := i;
+    until i >= R;
   end;
 
 begin
@@ -5297,36 +5588,36 @@ procedure T2DCircleList.SortOfMaxRadius;
     Result := CompareValue(d2, d1);
   end;
 
-  procedure QuickSortList(var SortList: TCoreClassPointerList; l, r: Integer); {$IFDEF INLINE_ASM} inline; {$ENDIF}
+  procedure QuickSortList(var SortList: TCoreClassPointerList; L, R: Integer); {$IFDEF INLINE_ASM} inline; {$ENDIF}
   var
-    i, j: Integer;
-    p, t: Pointer;
+    i, J: Integer;
+    p, T: Pointer;
   begin
     repeat
-      i := l;
-      j := r;
-      p := SortList[(l + r) shr 1];
+      i := L;
+      J := R;
+      p := SortList[(L + R) shr 1];
       repeat
         while ListSortCompare(SortList[i], p) < 0 do
             Inc(i);
-        while ListSortCompare(SortList[j], p) > 0 do
-            Dec(j);
-        if i <= j then
+        while ListSortCompare(SortList[J], p) > 0 do
+            Dec(J);
+        if i <= J then
           begin
-            if i <> j then
+            if i <> J then
               begin
-                t := SortList[i];
-                SortList[i] := SortList[j];
-                SortList[j] := t;
+                T := SortList[i];
+                SortList[i] := SortList[J];
+                SortList[J] := T;
               end;
             Inc(i);
-            Dec(j);
+            Dec(J);
           end;
-      until i > j;
-      if l < j then
-          QuickSortList(SortList, l, j);
-      l := i;
-    until i >= r;
+      until i > J;
+      if L < J then
+          QuickSortList(SortList, L, J);
+      L := i;
+    until i >= R;
   end;
 
 begin
@@ -5334,69 +5625,69 @@ begin
       QuickSortList(FList.ListData^, 0, Count - 1);
 end;
 
-function T2DRectList.GetItems(Index: Integer): P2DRect;
+function TRectV2List.GetItems(index: Integer): PRectV2;
 begin
   Result := FList[index];
 end;
 
-constructor T2DRectList.Create;
+constructor TRectV2List.Create;
 begin
   inherited Create;
   FList := TCoreClassList.Create;
 end;
 
-destructor T2DRectList.Destroy;
+destructor TRectV2List.Destroy;
 begin
   Clear;
   DisposeObject(FList);
   inherited Destroy;
 end;
 
-procedure T2DRectList.Assign(Source: TCoreClassPersistent);
+procedure TRectV2List.Assign(Source: TCoreClassPersistent);
 var
   i: Integer;
 begin
-  if Source is T2DRectList then
+  if Source is TRectV2List then
     begin
       Clear;
-      for i := 0 to T2DRectList(Source).Count - 1 do
-          Add(T2DRectList(Source)[i]^);
+      for i := 0 to TRectV2List(Source).Count - 1 do
+          Add(TRectV2List(Source)[i]^);
     end;
 end;
 
-function T2DRectList.Add(const v: T2DRect): Integer;
+function TRectV2List.Add(const v: TRectV2): Integer;
 var
-  p: P2DRect;
+  p: PRectV2;
 begin
-  New(p);
+  new(p);
   p^ := v;
   Result := FList.Add(p);
 end;
 
-function T2DRectList.Count: Integer;
+function TRectV2List.Count: Integer;
 begin
   Result := FList.Count;
 end;
 
-procedure T2DRectList.Clear;
+procedure TRectV2List.Clear;
 var
   i: Integer;
 begin
   for i := 0 to Count - 1 do
-      Dispose(P2DRect(FList[i]));
+      Dispose(PRectV2(FList[i]));
   FList.Clear;
 end;
 
-procedure T2DRectList.Delete(Index: Integer);
+procedure TRectV2List.Delete(index: Integer);
 var
-  p: P2DRect;
+  p: PRectV2;
 begin
   p := FList[index];
   Dispose(p);
   FList.Delete(index);
 end;
 
-function TPolyRect.IsZero: Boolean;
+function TV2Rect4.IsZero: Boolean;
 begin
   Result :=
     Geometry2DUnit.IsZero(LeftTop) and
@@ -5405,111 +5696,127 @@ begin
     Geometry2DUnit.IsZero(LeftBottom);
 end;
 
-function TPolyRect.Rotation(angle: TGeoFloat): TPolyRect;
+function TV2Rect4.Rotation(angle: TGeoFloat): TV2Rect4;
 var
-  axis: T2DPoint;
+  Axis: TVec2;
 begin
-  axis := Centroid;
-  Result.LeftTop := PointRotation(axis, LeftTop, PointAngle(axis, LeftTop) + angle);
-  Result.RightTop := PointRotation(axis, RightTop, PointAngle(axis, RightTop) + angle);
-  Result.RightBottom := PointRotation(axis, RightBottom, PointAngle(axis, RightBottom) + angle);
-  Result.LeftBottom := PointRotation(axis, LeftBottom, PointAngle(axis, LeftBottom) + angle);
+  Axis := Centroid;
+  Result.LeftTop := PointRotation(Axis, LeftTop, PointAngle(Axis, LeftTop) + angle);
+  Result.RightTop := PointRotation(Axis, RightTop, PointAngle(Axis, RightTop) + angle);
+  Result.RightBottom := PointRotation(Axis, RightBottom, PointAngle(Axis, RightBottom) + angle);
+  Result.LeftBottom := PointRotation(Axis, LeftBottom, PointAngle(Axis, LeftBottom) + angle);
 end;
 
-function TPolyRect.Rotation(axis: T2DPoint; angle: TGeoFloat): TPolyRect;
+function TV2Rect4.Rotation(Axis: TVec2; angle: TGeoFloat): TV2Rect4;
 begin
-  Result.LeftTop := PointRotation(axis, LeftTop, PointAngle(axis, LeftTop) + angle);
-  Result.RightTop := PointRotation(axis, RightTop, PointAngle(axis, RightTop) + angle);
-  Result.RightBottom := PointRotation(axis, RightBottom, PointAngle(axis, RightBottom) + angle);
-  Result.LeftBottom := PointRotation(axis, LeftBottom, PointAngle(axis, LeftBottom) + angle);
+  Result.LeftTop := PointRotation(Axis, LeftTop, PointAngle(Axis, LeftTop) + angle);
+  Result.RightTop := PointRotation(Axis, RightTop, PointAngle(Axis, RightTop) + angle);
+  Result.RightBottom := PointRotation(Axis, RightBottom, PointAngle(Axis, RightBottom) + angle);
+  Result.LeftBottom := PointRotation(Axis, LeftBottom, PointAngle(Axis, LeftBottom) + angle);
 end;
 
-function TPolyRect.Add(v: T2DPoint): TPolyRect;
+function TV2Rect4.Add(v: TVec2): TV2Rect4;
 begin
-  Result.LeftTop := PointAdd(LeftTop, v);
-  Result.RightTop := PointAdd(RightTop, v);
-  Result.RightBottom := PointAdd(RightBottom, v);
-  Result.LeftBottom := PointAdd(LeftBottom, v);
+  Result.LeftTop := Vec2Add(LeftTop, v);
+  Result.RightTop := Vec2Add(RightTop, v);
+  Result.RightBottom := Vec2Add(RightBottom, v);
+  Result.LeftBottom := Vec2Add(LeftBottom, v);
 end;
 
-function TPolyRect.Sub(v: T2DPoint): TPolyRect;
+function TV2Rect4.Sub(v: TVec2): TV2Rect4;
 begin
-  Result.LeftTop := PointSub(LeftTop, v);
-  Result.RightTop := PointSub(RightTop, v);
-  Result.RightBottom := PointSub(RightBottom, v);
-  Result.LeftBottom := PointSub(LeftBottom, v);
+  Result.LeftTop := Vec2Sub(LeftTop, v);
+  Result.RightTop := Vec2Sub(RightTop, v);
+  Result.RightBottom := Vec2Sub(RightBottom, v);
+  Result.LeftBottom := Vec2Sub(LeftBottom, v);
 end;
 
-function TPolyRect.Mul(v: T2DPoint): TPolyRect;
+function TV2Rect4.Mul(v: TVec2): TV2Rect4;
 begin
-  Result.LeftTop := PointMul(LeftTop, v);
-  Result.RightTop := PointMul(RightTop, v);
-  Result.RightBottom := PointMul(RightBottom, v);
-  Result.LeftBottom := PointMul(LeftBottom, v);
+  Result.LeftTop := Vec2Mul(LeftTop, v);
+  Result.RightTop := Vec2Mul(RightTop, v);
+  Result.RightBottom := Vec2Mul(RightBottom, v);
+  Result.LeftBottom := Vec2Mul(LeftBottom, v);
 end;
 
-function TPolyRect.MoveTo(Position: T2DPoint): TPolyRect;
+function TV2Rect4.Mul(v: TGeoFloat): TV2Rect4;
+begin
+  Result.LeftTop := Vec2Mul(LeftTop, v);
+  Result.RightTop := Vec2Mul(RightTop, v);
+  Result.RightBottom := Vec2Mul(RightBottom, v);
+  Result.LeftBottom := Vec2Mul(LeftBottom, v);
+end;
+
+function TV2Rect4.FDiv(v: TVec2): TV2Rect4;
+begin
+  Result.LeftTop := Vec2Div(LeftTop, v);
+  Result.RightTop := Vec2Div(RightTop, v);
+  Result.RightBottom := Vec2Div(RightBottom, v);
+  Result.LeftBottom := Vec2Div(LeftBottom, v);
+end;
+
+function TV2Rect4.MoveTo(Position: TVec2): TV2Rect4;
 begin
   Result := Init(Position, PointDistance(LeftTop, RightTop), PointDistance(LeftBottom, RightBottom), 0);
 end;
 
-function TPolyRect.BoundRect: T2DRect;
+function TV2Rect4.BoundRect: TRectV2;
 begin
   Result := Geometry2DUnit.BoundRect(LeftTop, RightTop, RightBottom, LeftBottom);
 end;
 
-function TPolyRect.BoundRectf: TRectf;
+function TV2Rect4.BoundRectf: TRectf;
 begin
   Result := MakeRectf(BoundRect);
 end;
 
-function TPolyRect.Centroid: T2DPoint;
+function TV2Rect4.Centroid: TVec2;
 begin
   Result := Geometry2DUnit.BuffCentroid(LeftTop, RightTop, RightBottom, LeftBottom);
 end;
 
-class function TPolyRect.Init(r: T2DRect; Ang: TGeoFloat): TPolyRect;
+class function TV2Rect4.Init(R: TRectV2; Ang: TGeoFloat): TV2Rect4;
 var
-  axis: T2DPoint;
+  Axis: TVec2;
 begin
   with Result do
     begin
-      LeftTop := PointMake(r[0][0], r[0][1]);
-      RightTop := PointMake(r[1][0], r[0][1]);
-      RightBottom := PointMake(r[1][0], r[1][1]);
-      LeftBottom := PointMake(r[0][0], r[1][1]);
+      LeftTop := PointMake(R[0][0], R[0][1]);
+      RightTop := PointMake(R[1][0], R[0][1]);
+      RightBottom := PointMake(R[1][0], R[1][1]);
+      LeftBottom := PointMake(R[0][0], R[1][1]);
     end;
   if Ang <> 0 then
       Result := Result.Rotation(Ang);
 end;
 
-class function TPolyRect.Init(r: TRectf; Ang: TGeoFloat): TPolyRect;
+class function TV2Rect4.Init(R: TRectf; Ang: TGeoFloat): TV2Rect4;
 begin
-  Result := Init(Make2DRect(r), Ang);
+  Result := Init(MakeRectV2(R), Ang);
 end;
 
-class function TPolyRect.Init(r: TRect; Ang: TGeoFloat): TPolyRect;
+class function TV2Rect4.Init(R: TRect; Ang: TGeoFloat): TV2Rect4;
 begin
-  Result := Init(Make2DRect(r), Ang);
+  Result := Init(MakeRectV2(R), Ang);
 end;
 
-class function TPolyRect.Init(CenPos: T2DPoint; width, height, Ang: TGeoFloat): TPolyRect;
+class function TV2Rect4.Init(CenPos: TVec2; width, height, Ang: TGeoFloat): TV2Rect4;
 var
-  r: T2DRect;
+  R: TRectV2;
 begin
-  r[0][0] := CenPos[0] - width * 0.5;
-  r[0][1] := CenPos[1] - height * 0.5;
-  r[1][0] := CenPos[0] + width * 0.5;
-  r[1][1] := CenPos[1] + height * 0.5;
-  Result := Init(r, Ang);
+  R[0][0] := CenPos[0] - width * 0.5;
+  R[0][1] := CenPos[1] - height * 0.5;
+  R[1][0] := CenPos[0] + width * 0.5;
+  R[1][1] := CenPos[1] + height * 0.5;
+  Result := Init(R, Ang);
 end;
 
-class function TPolyRect.Init(width, height, Ang: TGeoFloat): TPolyRect;
+class function TV2Rect4.Init(width, height, Ang: TGeoFloat): TV2Rect4;
 begin
-  Result := Init(Make2DRect(0, 0, width, height), Ang);
+  Result := Init(MakeRectV2(0, 0, width, height), Ang);
 end;
 
-class function TPolyRect.InitZero: TPolyRect;
+class function TV2Rect4.InitZero: TV2Rect4;
 begin
   with Result do
     begin
@@ -5522,9 +5829,9 @@ end;
 
 function TRectPacking.Pack(width, height: TGeoFloat; var X, Y: TGeoFloat): Boolean;
 var
-  i   : Integer;
-  p   : PRectPackData;
-  r, b: TGeoFloat;
+  i: Integer;
+  p: PRectPackData;
+  R, b: TGeoFloat;
 begin
   MaxWidth := Max(MaxWidth, width);
   MaxHeight := Max(MaxHeight, height);
@@ -5533,18 +5840,18 @@ begin
   while i < FList.Count do
     begin
       p := FList[i];
-      if (width <= RectWidth(p^.rect)) and (height <= RectHeight(p^.rect)) then
+      if (width <= RectWidth(p^.Rect)) and (height <= RectHeight(p^.Rect)) then
         begin
           FList.Delete(i);
-          X := p^.rect[0][0];
-          Y := p^.rect[0][1];
-          r := X + width;
+          X := p^.Rect[0][0];
+          Y := p^.Rect[0][1];
+          R := X + width;
           b := Y + height;
-          MaxWidth := Max(MaxWidth, Max(width, r));
+          MaxWidth := Max(MaxWidth, Max(width, R));
           MaxHeight := Max(MaxHeight, Max(height, b));
-          Add(X, b, width, p^.rect[1][1] - b);
-          Add(r, Y, p^.rect[1][0] - r, height);
-          Add(r, b, p^.rect[1][0] - r, p^.rect[1][1] - b);
+          Add(X, b, width, p^.Rect[1][1] - b);
+          Add(R, Y, p^.Rect[1][0] - R, height);
+          Add(R, b, p^.Rect[1][0] - R, p^.Rect[1][1] - b);
           Result := True;
           Dispose(p);
           Exit;
@@ -5556,7 +5863,7 @@ begin
   Result := False;
 end;
 
-function TRectPacking.GetItems(const Index: Integer): PRectPackData;
+function TRectPacking.GetItems(const index: Integer): PRectPackData;
 begin
   Result := PRectPackData(FList[index]);
 end;
@@ -5594,8 +5901,8 @@ procedure TRectPacking.Add(const X, Y, width, height: TGeoFloat);
 var
   p: PRectPackData;
 begin
-  New(p);
-  p^.rect := FixRect(Make2DRect(X, Y, X + width, Y + height));
+  new(p);
+  p^.Rect := FixRect(MakeRectV2(X, Y, X + width, Y + height));
   p^.error := True;
   p^.Data1 := nil;
   p^.Data2 := nil;
@@ -5606,17 +5913,22 @@ procedure TRectPacking.Add(Data1: Pointer; Data2: TCoreClassObject; X, Y, width,
 var
   p: PRectPackData;
 begin
-  New(p);
-  p^.rect := FixRect(Make2DRect(0, 0, width, height));
+  new(p);
+  p^.Rect := FixRect(MakeRectV2(0, 0, width, height));
   p^.error := True;
   p^.Data1 := Data1;
   p^.Data2 := Data2;
   FList.Add(p);
 end;
 
-procedure TRectPacking.Add(Data1: Pointer; Data2: TCoreClassObject; r: T2DRect);
+procedure TRectPacking.Add(Data1: Pointer; Data2: TCoreClassObject; R: TRectV2);
 begin
-  Add(Data1, Data2, 0, 0, RectWidth(r), RectHeight(r));
+  Add(Data1, Data2, 0, 0, RectWidth(R), RectHeight(R));
+end;
+
+procedure TRectPacking.Add(Data1: Pointer; Data2: TCoreClassObject; width, height: TGeoFloat);
+begin
+  Add(Data1, Data2, 0, 0, width, height);
 end;
 
 function TRectPacking.Data1Exists(const Data1: Pointer): Boolean;
@@ -5645,45 +5957,45 @@ procedure TRectPacking.Build(SpaceWidth, SpaceHeight: TGeoFloat);
 
   function ListSortCompare(Left, Right: Pointer): Integer; {$IFDEF INLINE_ASM} inline; {$ENDIF}
   begin
-    Result := CompareValue(RectArea(PRectPackData(Right)^.rect), RectArea(PRectPackData(Left)^.rect));
+    Result := CompareValue(RectArea(PRectPackData(Right)^.Rect), RectArea(PRectPackData(Left)^.Rect));
   end;
 
-  procedure QuickSortList(var SortList: TCoreClassPointerList; l, r: Integer); {$IFDEF INLINE_ASM} inline; {$ENDIF}
+  procedure QuickSortList(var SortList: TCoreClassPointerList; L, R: Integer); {$IFDEF INLINE_ASM} inline; {$ENDIF}
   var
-    i, j: Integer;
-    p, t: Pointer;
+    i, J: Integer;
+    p, T: Pointer;
   begin
     repeat
-      i := l;
-      j := r;
-      p := SortList[(l + r) shr 1];
+      i := L;
+      J := R;
+      p := SortList[(L + R) shr 1];
       repeat
         while ListSortCompare(SortList[i], p) < 0 do
             Inc(i);
-        while ListSortCompare(SortList[j], p) > 0 do
-            Dec(j);
-        if i <= j then
+        while ListSortCompare(SortList[J], p) > 0 do
+            Dec(J);
+        if i <= J then
           begin
-            if i <> j then
+            if i <> J then
               begin
-                t := SortList[i];
-                SortList[i] := SortList[j];
-                SortList[j] := t;
+                T := SortList[i];
+                SortList[i] := SortList[J];
+                SortList[J] := T;
               end;
             Inc(i);
-            Dec(j);
+            Dec(J);
           end;
-      until i > j;
-      if l < j then
-          QuickSortList(SortList, l, j);
-      l := i;
-    until i >= r;
+      until i > J;
+      if L < J then
+          QuickSortList(SortList, L, J);
+      L := i;
+    until i >= R;
   end;
 
 var
-  newLst    : TRectPacking;
-  p         : PRectPackData;
-  i         : Integer;
+  newLst: TRectPacking;
+  p: PRectPackData;
+  i: Integer;
   X, Y, w, h: TGeoFloat;
 begin
   if FList.Count > 1 then
@@ -5695,16 +6007,16 @@ begin
     begin
       p := FList[i];
 
-      X := p^.rect[0][0];
-      Y := p^.rect[0][1];
+      X := p^.Rect[0][0];
+      Y := p^.Rect[0][1];
 
-      w := RectWidth(p^.rect);
-      h := RectHeight(p^.rect);
+      w := RectWidth(p^.Rect);
+      h := RectHeight(p^.Rect);
 
       p^.error := not newLst.Pack(w + 2, h + 2, X, Y);
 
       if not p^.error then
-          p^.rect := Make2DRect(X, Y, X + w, Y + h);
+          p^.Rect := MakeRectV2(X, Y, X + w, Y + h);
     end;
 
   MaxWidth := newLst.MaxWidth;
@@ -5717,4 +6029,5 @@ initialization
 
 finalization
 
-end.
+end. 
+ 
