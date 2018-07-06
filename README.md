@@ -27,12 +27,16 @@ zChinese遵循Apache2.0开源协议
 - **Windows - delphi/fpc x64/100%兼容**
 - **Linux - delphi/fpc x64/100%兼容**
 - **OSX - delphi/fpc x86/100%兼容**
-- **Linux - delphi x86/不兼容 - fpc x86/100%兼容**
-- **OSX - delphi x64/不兼容 - fpc x64/100兼容**
+- **Linux - delphi x86/不兼容 - fpc x86/x64/100%兼容**
+- **OSX - 下一次更新版本会全面支持x64/x86**
+- **树莓派Linux - 下一次更新版本会全面支持树莓派**
+
 
 # 开发平台支持 #
-- Freepascal with Lazarus
-- Delphi XE10 或以上版本
+- Freepascal with Lazarus，http://lazarus.freepascal.org/
+- CodeTyphone，http://www.pilotlogic.com/
+- Delphi XE10 或以上版本，http://embarcadero.com/
+
 
 **特别提醒**
 - 基于zChinese的所有文本数据库均为UTF8 no bom编码，zChiense也能支持非UTF8编码，比如windows默认的中文ucs2和ascii
