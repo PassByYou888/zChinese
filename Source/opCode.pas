@@ -27,17 +27,17 @@ type
 
   TOpCode = class;
 
-  TOpParam = packed array of Variant;
+  TOpParam = array of Variant;
 
   POpData = ^opData;
 
-  opData = packed record
+  opData = record
     Op: TOpCode;
     Value: Variant;
     ValueType: TOpValueType;
   end;
 
-  TOnOpCall   = function(var Param: TOpParam): Variant;
+  TOnOpCall = function(var Param: TOpParam): Variant;
   TOnOpMethod = function(var Param: TOpParam): Variant of object;
 {$IFNDEF FPC}
   TOnOpProc = reference to function(var Param: TOpParam): Variant;
@@ -71,17 +71,19 @@ type
     function DoGetLast(var Param: TOpParam): Variant;
     function DoDeleteLast(var Param: TOpParam): Variant;
 
+    function DoMultiple(var Param: TOpParam): Variant;
+
     procedure InternalReg;
   public
     ProcList: THashList;
 
-    constructor Create; overload; virtual;
-    constructor Create(maxHashLen: Integer); overload; virtual;
+    constructor Create; virtual;
+    constructor CustomCreate(maxHashLen: Integer); virtual;
     destructor Destroy; override;
 
-    procedure RegOp(ProcName: SystemString; OnProc: TOnOpCall); overload;
-    procedure RegOp(ProcName: SystemString; OnProc: TOnOpMethod); overload;
-{$IFNDEF FPC} procedure RegOp(ProcName: SystemString; OnProc: TOnOpProc); overload; {$ENDIF FPC}
+    procedure RegOpC(ProcName: SystemString; OnProc: TOnOpCall); overload;
+    procedure RegOpM(ProcName: SystemString; OnProc: TOnOpMethod); overload;
+{$IFNDEF FPC} procedure RegOpP(ProcName: SystemString; OnProc: TOnOpProc); overload; {$ENDIF FPC}
   end;
 
   opClass = class of TOpCode;
@@ -106,10 +108,10 @@ type
     procedure SaveToStream(stream: TCoreClassStream);
     class function LoadFromStream(stream: TCoreClassStream; out LoadedOp: TOpCode): Boolean;
 
-    function AddValue(v: Variant): Integer; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-    function AddValueT(v: Variant; VT: TOpValueType): Integer; overload; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-    function AddLink(Obj: TOpCode): Integer; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-    { }
+    function AddValue(v: Variant): Integer; overload;
+    function AddValueT(v: Variant; VT: TOpValueType): Integer; overload;
+    function AddLink(Obj: TOpCode): Integer;
+
     function CloneNewSelf: TOpCode;
 
     property Param[index: Integer]: POpData read GetParam; default;
@@ -263,7 +265,7 @@ implementation
 type
   PopRTproc = ^TopRTproc;
 
-  TopRTproc = packed record
+  TopRTproc = record
     Param: TOpParam;
     Name: SystemString;
     OnOpCall: TOnOpCall;
@@ -272,7 +274,7 @@ type
     procedure Init;
   end;
 
-  opRegData = packed record
+  opRegData = record
     opClass: opClass;
     OpName: TPascalString;
     hash: Cardinal;
@@ -299,7 +301,7 @@ var
   hash: Cardinal;
 begin
   Result := nil;
-  hash := FastHashPascalString(@Name);
+  hash := FastHashPPascalString(@Name);
   for i := 0 to OpList.Count - 1 do
     begin
       p := OpList[i];
@@ -308,16 +310,16 @@ begin
     end;
 end;
 
-procedure RegisterOp(C: opClass);
+procedure RegisterOp(c: opClass);
 var
   p: POpRegData;
 begin
-  if GetRegistedOp(C.ClassName) <> nil then
-      raise Exception.Create('same op ' + C.ClassName);
+  if GetRegistedOp(c.ClassName) <> nil then
+      raise Exception.Create('same op ' + c.ClassName);
   new(p);
-  p^.opClass := C;
+  p^.opClass := c;
   p^.OpName := p^.opClass.ClassName;
-  p^.hash := FastHashPascalString(@p^.OpName);
+  p^.hash := FastHashPPascalString(@p^.OpName);
   OpList.Add(p);
 end;
 
@@ -544,7 +546,7 @@ function TOpCustomRunTime.DoBool(var Param: TOpParam): Variant;
   begin
     if VarIsStr(v) then
       begin
-        n.Text := VarToStr(v);
+        n := VarToStr(v);
         n := n.DeleteChar(#32#9);
         if n.Same('True') or n.Same('Yes') or n.Same('1') then
             Result := True
@@ -552,11 +554,11 @@ function TOpCustomRunTime.DoBool(var Param: TOpParam): Variant;
             Result := False;
       end
     else if VarIsOrdinal(v) then
-        Result := v > 0
+        Result := Boolean(v)
     else if VarIsFloat(v) then
-        Result := v > 0
+        Result := Boolean(Round(v))
     else
-        Result := v;
+        Result := Boolean(v);
   end;
 
 var
@@ -626,46 +628,64 @@ begin
       Result := '';
 end;
 
+function TOpCustomRunTime.DoMultiple(var Param: TOpParam): Variant;
+var
+  i:Integer;
+begin
+  if length(Param) >= 2 then
+    begin
+      Result:=True;
+      for i:=1 to length(Param)-1 do
+      Result := Result and umlMultipleMatch(VarToStr(Param[0]), VarToStr(Param[i]));
+    end
+  else
+      Result := True;
+end;
+
 procedure TOpCustomRunTime.InternalReg;
 begin
   ProcList.OnFreePtr := {$IFDEF FPC}@{$ENDIF FPC}FreeNotifyProc;
-  RegOp('Int', {$IFDEF FPC}@{$ENDIF FPC}DoInt);
-  RegOp('Frac', {$IFDEF FPC}@{$ENDIF FPC}DoFrac);
-  RegOp('Exp', {$IFDEF FPC}@{$ENDIF FPC}DoExp);
-  RegOp('Cos', {$IFDEF FPC}@{$ENDIF FPC}DoCos);
-  RegOp('Sin', {$IFDEF FPC}@{$ENDIF FPC}DoSin);
-  RegOp('Ln', {$IFDEF FPC}@{$ENDIF FPC}DoLn);
-  RegOp('ArcTan', {$IFDEF FPC}@{$ENDIF FPC}DoArcTan);
-  RegOp('Sqrt', {$IFDEF FPC}@{$ENDIF FPC}DoSqrt);
-  RegOp('Tan', {$IFDEF FPC}@{$ENDIF FPC}DoTan);
-  RegOp('Round', {$IFDEF FPC}@{$ENDIF FPC}DoRound);
-  RegOp('Trunc', {$IFDEF FPC}@{$ENDIF FPC}DoTrunc);
+  RegOpM('Int', {$IFDEF FPC}@{$ENDIF FPC}DoInt);
+  RegOpM('Frac', {$IFDEF FPC}@{$ENDIF FPC}DoFrac);
+  RegOpM('Exp', {$IFDEF FPC}@{$ENDIF FPC}DoExp);
+  RegOpM('Cos', {$IFDEF FPC}@{$ENDIF FPC}DoCos);
+  RegOpM('Sin', {$IFDEF FPC}@{$ENDIF FPC}DoSin);
+  RegOpM('Ln', {$IFDEF FPC}@{$ENDIF FPC}DoLn);
+  RegOpM('ArcTan', {$IFDEF FPC}@{$ENDIF FPC}DoArcTan);
+  RegOpM('Sqrt', {$IFDEF FPC}@{$ENDIF FPC}DoSqrt);
+  RegOpM('Tan', {$IFDEF FPC}@{$ENDIF FPC}DoTan);
+  RegOpM('Round', {$IFDEF FPC}@{$ENDIF FPC}DoRound);
+  RegOpM('Trunc', {$IFDEF FPC}@{$ENDIF FPC}DoTrunc);
 
-  RegOp('Str', {$IFDEF FPC}@{$ENDIF FPC}DoStr);
+  RegOpM('Str', {$IFDEF FPC}@{$ENDIF FPC}DoStr);
+  RegOpM('String', {$IFDEF FPC}@{$ENDIF FPC}DoStr);
+  RegOpM('Text', {$IFDEF FPC}@{$ENDIF FPC}DoStr);
 
-  RegOp('Bool', {$IFDEF FPC}@{$ENDIF FPC}DoBool);
-  RegOp('True', {$IFDEF FPC}@{$ENDIF FPC}DoTrue);
-  RegOp('False', {$IFDEF FPC}@{$ENDIF FPC}DoFalse);
-  RegOp('Random', {$IFDEF FPC}@{$ENDIF FPC}DoRandom);
+  RegOpM('Bool', {$IFDEF FPC}@{$ENDIF FPC}DoBool);
+  RegOpM('Boolean', {$IFDEF FPC}@{$ENDIF FPC}DoBool);
+  RegOpM('True', {$IFDEF FPC}@{$ENDIF FPC}DoTrue);
+  RegOpM('False', {$IFDEF FPC}@{$ENDIF FPC}DoFalse);
+  RegOpM('Random', {$IFDEF FPC}@{$ENDIF FPC}DoRandom);
 
-  RegOp('GetFirst', {$IFDEF FPC}@{$ENDIF FPC}DoGetFirst);
-  RegOp('DeleteFirst', {$IFDEF FPC}@{$ENDIF FPC}DoDeleteFirst);
-  RegOp('GetLast', {$IFDEF FPC}@{$ENDIF FPC}DoGetLast);
-  RegOp('DeleteLast', {$IFDEF FPC}@{$ENDIF FPC}DoDeleteLast);
+  RegOpM('GetFirst', {$IFDEF FPC}@{$ENDIF FPC}DoGetFirst);
+  RegOpM('First', {$IFDEF FPC}@{$ENDIF FPC}DoGetFirst);
+  RegOpM('DeleteFirst', {$IFDEF FPC}@{$ENDIF FPC}DoDeleteFirst);
+  RegOpM('GetLast', {$IFDEF FPC}@{$ENDIF FPC}DoGetLast);
+  RegOpM('Last', {$IFDEF FPC}@{$ENDIF FPC}DoGetLast);
+  RegOpM('DeleteLast', {$IFDEF FPC}@{$ENDIF FPC}DoDeleteLast);
+
+  RegOpM('MultipleMatch', {$IFDEF FPC}@{$ENDIF FPC}DoMultiple);
 end;
 
 constructor TOpCustomRunTime.Create;
 begin
-  inherited Create;
-  ProcList := THashList.Create(256);
-  ProcList.AutoFreeData := True;
-  InternalReg;
+  CustomCreate(256);
 end;
 
-constructor TOpCustomRunTime.Create(maxHashLen: Integer);
+constructor TOpCustomRunTime.CustomCreate(maxHashLen: Integer);
 begin
   inherited Create;
-  ProcList := THashList.Create(maxHashLen);
+  ProcList := THashList.CustomCreate(maxHashLen);
   ProcList.AutoFreeData := True;
   InternalReg;
 end;
@@ -676,7 +696,7 @@ begin
   inherited Destroy;
 end;
 
-procedure TOpCustomRunTime.RegOp(ProcName: SystemString; OnProc: TOnOpCall);
+procedure TOpCustomRunTime.RegOpC(ProcName: SystemString; OnProc: TOnOpCall);
 var
   p: PopRTproc;
 begin
@@ -687,7 +707,7 @@ begin
   ProcList.Add(ProcName, p, True);
 end;
 
-procedure TOpCustomRunTime.RegOp(ProcName: SystemString; OnProc: TOnOpMethod);
+procedure TOpCustomRunTime.RegOpM(ProcName: SystemString; OnProc: TOnOpMethod);
 var
   p: PopRTproc;
 begin
@@ -701,7 +721,7 @@ end;
 {$IFNDEF FPC}
 
 
-procedure TOpCustomRunTime.RegOp(ProcName: SystemString; OnProc: TOnOpProc);
+procedure TOpCustomRunTime.RegOpP(ProcName: SystemString; OnProc: TOnOpProc);
 var
   p: PopRTproc;
 begin
@@ -1008,7 +1028,7 @@ function op_Add.DoExecute(opRT: TOpCustomRunTime): Variant;
 
 var
   i: Integer;
-  N1, N2: TPascalString;
+  n1, n2: TPascalString;
 begin
   if Count = 0 then
       Exit(Null);
@@ -1017,15 +1037,15 @@ begin
   if Fast_VarIsStr(Result) then
     begin
       // optimized
-      N1 := VarToStr(Result);
+      n1 := VarToStr(Result);
       for i := 1 to Count - 1 do
         begin
           try
-              N1.Append(VarToStr(Param[i]^.Value));
+              n1.Append(VarToStr(Param[i]^.Value));
           except
           end;
         end;
-      Result := N1.Text;
+      Result := n1.Text;
     end
   else
     begin
@@ -1035,10 +1055,10 @@ begin
             if Fast_VarIsStr(Result) then
               begin
                 // SystemString combine
-                N1 := VarToStr(Result);
-                if not umlIsNumber(N1) then
+                n1 := VarToStr(Result);
+                if not umlIsNumber(n1) then
                   begin
-                    Result := N1 + VarToStr(Param[i]^.Value);
+                    Result := n1 + VarToStr(Param[i]^.Value);
                     Continue;
                   end
               end;
@@ -1046,10 +1066,10 @@ begin
             if Fast_VarIsStr(Param[i]^.Value) then
               begin
                 // SystemString combine
-                N2 := VarToStr(Param[i]^.Value);
-                if not umlIsNumber(N2) then
+                n2 := VarToStr(Param[i]^.Value);
+                if not umlIsNumber(n2) then
                   begin
-                    Result := VarToStr(Result) + N2;
+                    Result := VarToStr(Result) + n2;
                     Continue;
                   end
               end;
@@ -1295,4 +1315,3 @@ DisposeObject(DefaultOpRT);
 _FreeOp;
 
 end.
- 

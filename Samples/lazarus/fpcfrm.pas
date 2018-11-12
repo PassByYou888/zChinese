@@ -69,31 +69,31 @@ begin
     [GoodRep('中文自然语言支持的开源项目，它是中文化处理的地基库')]);
 
   // GBK中文字符串自动化修复，自动修正繁体编码为简体，自动修正全角符号为半角，支持库：GBK.pas
-  DoStatus('GBK中文字符串自动化修复：' +
+  DoStatus(TUPascalString('GBK中文字符串自动化修复：') +
     GBKString('中文自然语言支持的开源项目，它是中文化处理的地基库'));
 
   // 自动逆向拼音编码，自动返回带音标的字符串结果，自动区分多音字，支持库：GBK.pas
-  DoStatus('自动逆向拼音编码：' +
+  DoStatus(TUPascalString('自动逆向拼音编码：') +
     PY('中文自然语言支持的开源项目，它是中文化处理的地基库',
     True));
-  DoStatus('自动逆向拼音编码：' +
+  DoStatus(TUPascalString('自动逆向拼音编码：') +
     PY('中文自然语言支持的开源项目，它是中文化处理的地基库',
     False));
 
   // 简体转繁体，非纯编码转换，会自动生成繁体词组，支持库：GBK.pas
-  DoStatus('简体转繁体：' +
+  DoStatus(TUPascalString('简体转繁体：') +
     S2T('中文自然语言支持的开源项目，它是中文化处理的地基库'));
 
   // 简体转香港繁体，非纯编码转换，会自动生成香港繁体词组，支持库：GBK.pas
-  DoStatus('简体转香港繁体：' +
+  DoStatus(TUPascalString('简体转香港繁体：') +
     S2HK('中文自然语言支持的开源项目，它是中文化处理的地基库'));
 
   // 简体转台湾繁体，非纯编码转换，会自动生成台湾繁体词组，支持库：GBK.pas
-  DoStatus('简体转台湾繁体：' +
+  DoStatus(TUPascalString('简体转台湾繁体：') +
     S2TW('中文自然语言支持的开源项目，它是中文化处理的地基库'));
 
   // 繁体转简体，非纯编码转换，会自动分析词组，如：网际互联网->互联网，支持库：GBK.pas
-  DoStatus('繁体转简体：' +
+  DoStatus(TUPascalString('繁体转简体：') +
     T2S('中文自然语言支持的开源项目，它是中文化处理的地基库'));
 end;
 

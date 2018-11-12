@@ -18,11 +18,12 @@
         <Filename Value="fpcfrm.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="FPCForm"/>
+        <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="fpcFrm"/>
         <IsVisibleTab Value="True"/>
         <TopLine Value="57"/>
-        <CursorPos X="42" Y="102"/>
+        <CursorPos X="48" Y="76"/>
         <UsageCount Value="20"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -48,7 +49,7 @@
       <Unit4>
         <Filename Value="..\..\Source\CoreClasses.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="3"/>
         <TopLine Value="251"/>
         <CursorPos X="31" Y="29"/>
         <UsageCount Value="20"/>
@@ -75,8 +76,9 @@
       <Unit7>
         <Filename Value="..\..\Source\DoStatusIO.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="1"/>
-        <CursorPos X="26" Y="33"/>
+        <EditorIndex Value="2"/>
+        <TopLine Value="30"/>
+        <CursorPos X="11" Y="49"/>
         <UsageCount Value="20"/>
         <Loaded Value="True"/>
       </Unit7>
@@ -101,11 +103,11 @@
       <Unit10>
         <Filename Value="..\..\Source\GBK.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="-1"/>
-        <WindowIndex Value="-1"/>
-        <TopLine Value="-1"/>
-        <CursorPos X="-1" Y="-1"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="9"/>
+        <CursorPos X="54" Y="28"/>
         <UsageCount Value="20"/>
+        <Loaded Value="True"/>
       </Unit10>
       <Unit11>
         <Filename Value="..\..\Source\GBKBig.pas"/>
@@ -288,35 +290,47 @@
         <UsageCount Value="20"/>
       </Unit30>
     </Units>
-    <JumpHistory Count="7" HistoryIndex="6">
+    <JumpHistory Count="10" HistoryIndex="9">
       <Position1>
         <Filename Value="fpcfrm.pas"/>
         <Caret Line="35" TopLine="11"/>
       </Position1>
       <Position2>
         <Filename Value="fpcfrm.pas"/>
-        <Caret Line="8" Column="67" TopLine="31"/>
+        <Caret Line="20"/>
       </Position2>
       <Position3>
         <Filename Value="fpcfrm.pas"/>
-        <Caret Line="20"/>
+        <Caret Line="85" TopLine="52"/>
       </Position3>
       <Position4>
         <Filename Value="fpcfrm.pas"/>
-        <Caret Line="85" TopLine="52"/>
+        <Caret Line="93" TopLine="60"/>
       </Position4>
       <Position5>
         <Filename Value="fpcfrm.pas"/>
-        <Caret Line="93" TopLine="60"/>
+        <Caret Line="113" Column="5" TopLine="51"/>
       </Position5>
       <Position6>
         <Filename Value="fpcfrm.pas"/>
-        <Caret Line="113" Column="5" TopLine="51"/>
+        <Caret Line="18" Column="18" TopLine="6"/>
       </Position6>
       <Position7>
         <Filename Value="fpcfrm.pas"/>
-        <Caret Line="18" Column="18" TopLine="6"/>
+        <Caret Line="84" Column="12" TopLine="65"/>
       </Position7>
+      <Position8>
+        <Filename Value="fpcfrm.pas"/>
+        <Caret Line="96" Column="47" TopLine="65"/>
+      </Position8>
+      <Position9>
+        <Filename Value="fpcfrm.pas"/>
+        <Caret Line="72" Column="7" TopLine="54"/>
+      </Position9>
+      <Position10>
+        <Filename Value="fpcfrm.pas"/>
+        <Caret Line="56" Column="6" TopLine="54"/>
+      </Position10>
     </JumpHistory>
   </ProjectSession>
 </CONFIG>
