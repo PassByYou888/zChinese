@@ -7,7 +7,7 @@ program delphiDemo;
 
 uses
   System.SysUtils,
-  FastGBK, GBK, GBKBig, GBKMediaCenter, GBKVec, DoStatusIO, PascalStrings, UPascalStrings, UnicodeMixedLib;
+  FastGBK, GBK, GBKBig, GBKMediaCenter, GBKVec, DoStatusIO, UPascalStrings, UnicodeMixedLib;
 
 procedure Test;
 begin
