@@ -136,6 +136,8 @@ LoadAndMergeDict(词库路径);
 **2019-4**
 
 - 修复ListEngine中的IgnoreCase问题，感谢qq56571173
+- 内核字符串支持平台编码的bytes
+- 内核字符串支持平台编码的PChar,PAnaiChar
 
 **2018-7-6**
 
