@@ -2,7 +2,7 @@
 <CONFIG>
   <ProjectSession>
     <PathDelim Value="\"/>
-    <Version Value="10"/>
+    <Version Value="11"/>
     <BuildModes Active="Default"/>
     <Units Count="31">
       <Unit0>
@@ -23,7 +23,7 @@
         <UnitName Value="fpcFrm"/>
         <IsVisibleTab Value="True"/>
         <TopLine Value="57"/>
-        <CursorPos X="48" Y="76"/>
+        <CursorPos X="82" Y="79"/>
         <UsageCount Value="20"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -49,11 +49,10 @@
       <Unit4>
         <Filename Value="..\..\Source\CoreClasses.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="3"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="251"/>
         <CursorPos X="31" Y="29"/>
         <UsageCount Value="20"/>
-        <Loaded Value="True"/>
       </Unit4>
       <Unit5>
         <Filename Value="..\..\Source\CoreCompress.pas"/>
@@ -76,11 +75,10 @@
       <Unit7>
         <Filename Value="..\..\Source\DoStatusIO.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="30"/>
         <CursorPos X="11" Y="49"/>
         <UsageCount Value="20"/>
-        <Loaded Value="True"/>
       </Unit7>
       <Unit8>
         <Filename Value="..\..\Source\Fast_MD5.pas"/>
@@ -103,11 +101,10 @@
       <Unit10>
         <Filename Value="..\..\Source\GBK.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="1"/>
+        <EditorIndex Value="-1"/>
         <TopLine Value="9"/>
         <CursorPos X="54" Y="28"/>
         <UsageCount Value="20"/>
-        <Loaded Value="True"/>
       </Unit10>
       <Unit11>
         <Filename Value="..\..\Source\GBKBig.pas"/>
@@ -332,5 +329,9 @@
         <Caret Line="56" Column="6" TopLine="54"/>
       </Position10>
     </JumpHistory>
+    <RunParams>
+      <FormatVersion Value="2"/>
+      <Modes Count="0" ActiveMode="default"/>
+    </RunParams>
   </ProjectSession>
 </CONFIG>

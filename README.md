@@ -19,26 +19,42 @@ zChinese遵循Apache2.0开源协议
 - 外置大规模词典数据库支持（外置词典数据库管理系统）
 - 内置小词典数据库
 
-# 运行平台支持 #
-- **IOS armv7 - delphi/fpc 100%兼容**
-- **IOS arm64 - delphi/fpc 100%兼容**
-- **Anroid - delphi/fpc 100%兼容**
-- **Windows - delphi/fpc x86/100%兼容**
-- **Windows - delphi/fpc x64/100%兼容**
-- **Linux - delphi/fpc x64/100%兼容**
-- **OSX - delphi/fpc x86/100%兼容**
-- **Linux - delphi x86/不兼容 - fpc x86/x64/100%兼容**
-- **OSX - 下一次更新版本会全面支持x64/x86**
-- **树莓派Linux - 下一次更新版本会全面支持树莓派**
+## 开发平台支持
 
+- Delphi及IDE要求：Delphi Rad studio XE10.3.1 or Last
+- FPC编译器支持:FPC3.0.4 or last,可参看本项目随附的[IOT入手指南](https://github.com/PassByYou888/ZServer4D/blob/master/Documents/%E5%85%A5%E6%89%8BIOT%E7%9A%84%E5%AE%8C%E5%85%A8%E6%94%BB%E7%95%A5.pdf)将FPC升级至github最新的版本
+- CodeTyphon 6.0 or last（尽量使用Online更新到最新的Cross工具链+相关库）
 
-# 开发平台支持 #
-- Freepascal with Lazarus，http://lazarus.freepascal.org/
-- CodeTyphone，http://www.pilotlogic.com/
-- Delphi XE10 或以上版本，http://embarcadero.com/
+## 平台支持，test with Delphi 10.3 upate 1 and FPC 3.0.4
+
+- Windows: delphi-CrossSocket(C/S OK), delphi-DIOCP(C/S OK), delphi-ICS(C/S OK), delphi-Indy(C/S OK),delphi+fpc Synapse(C/S OK)
+- Android:Indy(C/S OK), CrossSocket(Only Client)
+- IOS Device: Indy(C/S OK), CrossSocket(Only Client)
+- IOS Simulaor: n/a
+- OSX: Indy(C/S OK)，ICS(未测试), CrossSocket(C/S OK)
+- Ubuntu16.04 x64 server: Indy(C/S OK), CrossSocket(C/S OK)
+- Ubuntu18.04 x86+x64 Desktop:only fpc3.0.4 Synapse(C/S OK)
+- Ubuntu18.04 x86+x64 Server:only fpc3.0.4 Synapse(C/S OK) 
+- Ubuntu18.04 arm32+arm neon Server:only fpc3.0.4 Synapse(C/S OK)
+- Ubuntu18.04 arm32+arm neon desktop:only fpc3.0.4 compile ok,no test on run.  
+- Ubuntu16.04 Mate arm32 desktop:only fpc3.0.4 compile ok, test passed  
+- Raspberry Pi 3 Debian linux armv7 desktop,only fpc 3.0.4,test passed.
+- wince(arm eabi hard flaot),windows 10 IOT,only fpc 3.3.1,test passed.
+
+## CPU架构支持，test with Delphi 10.3 upate 1 and FPC 3.0.4
+
+- MIPS(fpc-little endian), soft float, test pass on QEMU 
+- intel X86(fpc-x86), soft float
+- intel X86(delphi+fpc), hard float,80386,PENTIUM,PENTIUM2,PENTIUM3,PENTIUM4,PENTIUMM,COREI,COREAVX,COREAVX2
+- intel X64(fpc-x86_64), soft float
+- intel X64(delphi+fpc), hard float,ATHLON64,COREI,COREAVX,COREAVX2
+- ARM(fpc-arm32-eabi,soft float):ARMV3,ARMV4,ARMV4T,ARMV5,ARMV5T,ARMV5TE,ARMV5TEJ
+- ARM(fpc-arm32-eabi,hard float):ARMV6,ARMV6K,ARMV6T2,ARMV6Z,ARMV6M,ARMV7,ARMV7A,ARMV7R,ARMV7M,ARMV7EM
+- ARM(fpc-arm64-eabi,hard float):ARMV8，aarch64
 
 
 **特别提醒**
+
 - 基于zChinese的所有文本数据库均为UTF8 no bom编码，zChiense也能支持非UTF8编码，比如windows默认的中文ucs2和ascii
 - 基于FPC编译器使用zChinese时因为FPC的RT库默认为ansi字符处理机制，需要使用TUPascalString来处理Unicode的中文字符串
 - 已在zChinese内部做了FPC支持：fpc使用zChinese的原理是传递字符到zChinese函数时强制转换成UnicodeString字符串，待处理完成后，再转换成FPC的内核字符串处理机制
@@ -117,6 +133,10 @@ LoadAndMergeDict(词库路径);
 
 ## 更新日志
 
+**2019-4**
+
+- 修复ListEngine中的IgnoreCase问题，感谢qq56571173
+
 **2018-7-6**
 
 - 全面支持Linux(fpc方向)
@@ -144,4 +164,3 @@ LoadAndMergeDict(词库路径);
 请不要直接加作者，谢谢大家
 
 2018-4
-
