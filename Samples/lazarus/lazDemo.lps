@@ -21,9 +21,8 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="fpcFrm"/>
-        <IsVisibleTab Value="True"/>
         <TopLine Value="57"/>
-        <CursorPos X="82" Y="79"/>
+        <CursorPos X="56" Y="74"/>
         <UsageCount Value="20"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -93,9 +92,8 @@
         <Filename Value="..\..\Source\FastGBK.pas"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="-1"/>
-        <WindowIndex Value="-1"/>
-        <TopLine Value="-1"/>
-        <CursorPos X="-1" Y="-1"/>
+        <TopLine Value="2"/>
+        <CursorPos X="42" Y="19"/>
         <UsageCount Value="20"/>
       </Unit9>
       <Unit10>
@@ -118,11 +116,12 @@
       <Unit12>
         <Filename Value="..\..\Source\GBKMediaCenter.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="-1"/>
-        <WindowIndex Value="-1"/>
-        <TopLine Value="-1"/>
-        <CursorPos X="-1" Y="-1"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="8"/>
+        <CursorPos X="51" Y="26"/>
         <UsageCount Value="20"/>
+        <Loaded Value="True"/>
       </Unit12>
       <Unit13>
         <Filename Value="..\..\Source\GBKVec.pas"/>
@@ -287,7 +286,7 @@
         <UsageCount Value="20"/>
       </Unit30>
     </Units>
-    <JumpHistory Count="10" HistoryIndex="9">
+    <JumpHistory Count="11" HistoryIndex="10">
       <Position1>
         <Filename Value="fpcfrm.pas"/>
         <Caret Line="35" TopLine="11"/>
@@ -328,6 +327,10 @@
         <Filename Value="fpcfrm.pas"/>
         <Caret Line="56" Column="6" TopLine="54"/>
       </Position10>
+      <Position11>
+        <Filename Value="fpcfrm.pas"/>
+        <Caret Line="74" Column="56" TopLine="57"/>
+      </Position11>
     </JumpHistory>
     <RunParams>
       <FormatVersion Value="2"/>
