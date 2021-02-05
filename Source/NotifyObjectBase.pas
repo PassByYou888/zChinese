@@ -612,7 +612,7 @@ ProgressCadencer := TNProgressPostWithCadencer.Create;
 
 finalization
 
-DisposeObject(ProgressCadencer);
 CoreClasses.OnCheckThreadSynchronize := Hooked_OnCheckThreadSynchronize;
+DisposeObject(ProgressCadencer);
 
 end.
