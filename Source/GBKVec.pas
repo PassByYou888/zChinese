@@ -44,27 +44,26 @@ uses GBK, GBKMediaCenter;
 
 function WordPart(const s: TUPascalString; const Unidentified, Completed: TListPascalString): Integer;
 var
-  ns, n2   : TUPascalString;
-  i, j     : Integer;
+  n, tmp: TUPascalString;
+  i, j: Integer;
   Successed: Boolean;
 begin
   WaitGBKMediaInit;
-  Completed.Clear;
-  ns := GBKString(s);
+  n := GBKString(s);
   Result := 0;
 
   i := 1;
-  while i <= ns.Len do
+  while i <= n.L do
     begin
       Successed := False;
-      j := umlMin(WordPartDict.MaxSectionNameLen, ns.Len - i);
+      j := umlMin(WordPartDict.MaxSectionNameLen, n.L - i + 1);
       while j > 1 do
         begin
-          n2 := ns.Copy(i, j);
-          Successed := WordPartDict.Exists(n2);
+          tmp := n.Copy(i, j);
+          Successed := WordPartDict.Exists(tmp);
           if Successed then
             begin
-              Completed.Add(n2.Text, WordPartDict.VariantList[n2.Text]);
+              Completed.Add(tmp.Text, WordPartDict.VariantList[tmp.Text]);
               inc(Result);
               inc(i, j);
               Break;
@@ -74,15 +73,15 @@ begin
 
       if not Successed then
         begin
-          Successed := WordPartDict.Exists(ns[i]);
+          Successed := WordPartDict.Exists(n[i]);
           if Successed then
             begin
-              Completed.Add(ns[i], WordPartDict.VariantList[ns[i]]);
+              Completed.Add(n[i], WordPartDict.VariantList[n[i]]);
               inc(Result);
             end
           else
             begin
-              Unidentified.Add(ns[i]);
+              Unidentified.Add(n[i]);
             end;
           inc(i);
         end;
@@ -92,8 +91,8 @@ end;
 function WordPart(const s: TUPascalString): TPascalString;
 var
   Unidentified: TListPascalString;
-  Completed   : TListPascalString;
-  i           : Integer;
+  Completed: TListPascalString;
+  i: Integer;
 begin
   WaitGBKMediaInit;
   Result := '';
@@ -103,7 +102,7 @@ begin
     begin
       for i := 0 to Completed.Count - 1 do
         begin
-          if Result.Len > 0 then
+          if Result.L > 0 then
               Result.Append(',');
           Result.Append(Completed[i]);
         end;
@@ -114,8 +113,8 @@ end;
 function WordPartN(const s: TUPascalString): TPascalString;
 var
   Unidentified: TListPascalString;
-  Completed   : TListPascalString;
-  i           : Integer;
+  Completed: TListPascalString;
+  i: Integer;
 begin
   WaitGBKMediaInit;
   Result := '';
@@ -125,7 +124,7 @@ begin
     begin
       for i := 0 to Completed.Count - 1 do
         begin
-          if Result.Len > 0 then
+          if Result.L > 0 then
               Result.Append(' ');
           Result.Append(Completed[i].Text + '\' + VarToStr(THashVariantList(Completed.Objects[i]).GetDefaultValue('token', '')));
         end;
@@ -136,8 +135,8 @@ end;
 function WordPartD(const s: TUPascalString): TPascalString;
 var
   Unidentified: TListPascalString;
-  Completed   : TListPascalString;
-  i           : Integer;
+  Completed: TListPascalString;
+  i: Integer;
 begin
   WaitGBKMediaInit;
   Result := '';
@@ -147,7 +146,7 @@ begin
     begin
       for i := 0 to Completed.Count - 1 do
         begin
-          if Result.Len > 0 then
+          if Result.L > 0 then
               Result.Append(#13#10);
           Result.Append(Completed[i].Text + '(' + VarToStr(THashVariantList(Completed.Objects[i]).GetDefaultValue('desc', '')) + ')');
         end;
@@ -157,25 +156,25 @@ end;
 
 function FullQuery_Table(const List: THashList; const s: TUPascalString): Integer; overload;
 var
-  ns, n2, n3: TUPascalString;
-  i, j, L   : Integer;
-  Successed : Boolean;
+  n, tmp, n3: TUPascalString;
+  i, j, L: Integer;
+  Successed: Boolean;
 begin
   WaitGBKMediaInit;
-  ns := GBKString(s);
+  n := GBKString(s);
 
   Result := 0;
   L := List.MaxNameLen;
 
   i := 1;
-  while i <= ns.Len do
+  while i <= n.L do
     begin
       Successed := False;
-      j := umlMin(L, ns.Len - i);
+      j := umlMin(L, n.L - i + 1);
       while j > 1 do
         begin
-          n2 := ns.Copy(i, j);
-          Successed := List.Exists(n2);
+          tmp := n.Copy(i, j);
+          Successed := List.Exists(tmp);
           if Successed then
             begin
               inc(Result);
@@ -187,7 +186,7 @@ begin
 
       if not Successed then
         begin
-          Successed := List.Exists(ns[i]);
+          Successed := List.Exists(n[i]);
           if Successed then
               inc(Result);
           inc(i);
@@ -196,24 +195,24 @@ begin
 end;
 
 function FullQuery_Table(const List: THashTextEngine; const s: TUPascalString): Integer; overload;
-  function InternalQuery(const vl: THashVariantList; const ns: TUPascalString): Integer;
+  function InternalQuery(const vl: THashVariantList; const n: TUPascalString): Integer;
   var
-    n2       : TUPascalString;
-    i, j, L  : Integer;
+    tmp: TUPascalString;
+    i, j, L: Integer;
     Successed: Boolean;
   begin
     Result := 0;
     L := vl.HashList.MaxNameLen;
 
     i := 1;
-    while i <= ns.Len do
+    while i <= n.L do
       begin
         Successed := False;
-        j := umlMin(L, ns.Len - i);
+        j := umlMin(L, n.L - i + 1);
         while j > 1 do
           begin
-            n2 := ns.Copy(i, j);
-            Successed := vl.Exists(n2);
+            tmp := n.Copy(i, j);
+            Successed := vl.Exists(tmp);
             if Successed then
               begin
                 inc(Result);
@@ -225,7 +224,7 @@ function FullQuery_Table(const List: THashTextEngine; const s: TUPascalString): 
 
         if not Successed then
           begin
-            Successed := vl.Exists(ns[i]);
+            Successed := vl.Exists(n[i]);
             if Successed then
                 inc(Result);
             inc(i);
@@ -234,18 +233,18 @@ function FullQuery_Table(const List: THashTextEngine; const s: TUPascalString): 
   end;
 
 var
-  ns  : TUPascalString;
+  n: TUPascalString;
   i, r: Integer;
-  pl  : TListPascalString;
+  pl: TListPascalString;
 begin
   WaitGBKMediaInit;
-  ns := GBKString(s);
+  n := GBKString(s);
   Result := 0;
   pl := TListPascalString.Create;
   List.GetSectionList(pl);
   for i := 0 to pl.Count - 1 do
     begin
-      r := InternalQuery(List.VariantList[pl[i]], ns);
+      r := InternalQuery(List.VariantList[pl[i]], n);
       inc(Result, umlStrToInt(pl[i]) * r);
     end;
   DisposeObject(pl);
@@ -287,6 +286,4 @@ begin
   Result := FullQuery_Table(GoodRepDict, s);
 end;
 
-end. 
- 
- 
+end.

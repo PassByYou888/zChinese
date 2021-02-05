@@ -22,8 +22,7 @@ unit GBKBig;
 
 interface
 
-uses DoStatusIO, CoreClasses, PascalStrings, MemoryStream64, ListEngine, UnicodeMixedLib,
-  UPascalStrings;
+uses DoStatusIO, CoreClasses, PascalStrings, MemoryStream64, ListEngine, UnicodeMixedLib, UPascalStrings;
 
 procedure BigKeyAnalysis(const Analysis: THashVariantList);
 function BigKey(const s: TUPascalString; const MatchSingleWord: Boolean; const Unidentified, Completed: TListPascalString): Integer;
@@ -60,25 +59,25 @@ end;
 
 function BigKey(const s: TUPascalString; const MatchSingleWord: Boolean; const Unidentified, Completed: TListPascalString): Integer;
 var
-  ns, n2: TUPascalString;
+  n, tmp: TUPascalString;
   i, j: Integer;
   Successed: Boolean;
 begin
-  ns := GBKString(s);
+  n := GBKString(s);
   Result := 0;
 
   i := 1;
-  while i <= ns.Len do
+  while i <= n.L do
     begin
       Successed := False;
-      j := umlMin(bigKeyDict.HashList.MaxNameLen, ns.Len - i);
+      j := umlMin(bigKeyDict.HashList.MaxNameLen, n.L - i + 1);
       while j > 1 do
         begin
-          n2 := ns.Copy(i, j);
-          Successed := bigKeyDict.Exists(n2);
+          tmp := n.Copy(i, j);
+          Successed := bigKeyDict.Exists(tmp);
           if Successed then
             begin
-              Completed.Add(n2.Text);
+              Completed.Add(tmp.Text);
               inc(Result);
               inc(i, j);
               Break;
@@ -88,15 +87,15 @@ begin
 
       if not Successed then
         begin
-          Successed := MatchSingleWord and bigKeyDict.Exists(ns[i]);
+          Successed := MatchSingleWord and bigKeyDict.Exists(n[i]);
           if Successed then
             begin
-              Completed.Add(ns[i]);
+              Completed.Add(n[i]);
               inc(Result);
             end
           else
             begin
-              Unidentified.Add(ns[i]);
+              Unidentified.Add(n[i]);
             end;
           inc(i);
         end;
@@ -132,7 +131,7 @@ begin
     begin
       for i := 0 to Completed.Count - 1 do
         begin
-          if Result.Len > 0 then
+          if Result.L > 0 then
               Result.Append(',');
           Result.Append(Completed[i]);
         end;
@@ -142,25 +141,25 @@ end;
 
 function BigWord(const s: TUPascalString; const MatchSingleWord: Boolean; const Unidentified, Completed: TListPascalString): Integer;
 var
-  ns, n2: TUPascalString;
+  n, tmp: TUPascalString;
   i, j: Integer;
   Successed: Boolean;
 begin
-  ns := GBKString(s);
+  n := GBKString(s);
   Result := 0;
 
   i := 1;
-  while i <= ns.Len do
+  while i <= n.L do
     begin
       Successed := False;
-      j := umlMin(bigWordDict.MaxNameLen, ns.Len - i);
+      j := umlMin(bigWordDict.MaxNameLen, n.L - i + 1);
       while j > 1 do
         begin
-          n2 := ns.Copy(i, j);
-          Successed := bigWordDict.Exists(n2);
+          tmp := n.Copy(i, j);
+          Successed := bigWordDict.Exists(tmp);
           if Successed then
             begin
-              Completed.Add(n2.Text);
+              Completed.Add(tmp.Text);
               inc(Result);
               inc(i, j);
               Break;
@@ -170,15 +169,15 @@ begin
 
       if not Successed then
         begin
-          Successed := MatchSingleWord and bigWordDict.Exists(ns[i]);
+          Successed := MatchSingleWord and bigWordDict.Exists(n[i]);
           if Successed then
             begin
-              Completed.Add(ns[i]);
+              Completed.Add(n[i]);
               inc(Result);
             end
           else
             begin
-              Unidentified.Add(ns[i]);
+              Unidentified.Add(n[i]);
             end;
           inc(i);
         end;
@@ -198,7 +197,7 @@ begin
     begin
       for i := 0 to Completed.Count - 1 do
         begin
-          if Result.Len > 0 then
+          if Result.L > 0 then
               Result.Append(',');
           Result.Append(Completed[i]);
         end;

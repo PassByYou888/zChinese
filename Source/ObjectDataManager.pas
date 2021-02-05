@@ -53,9 +53,9 @@ type
     CurrentBlockSeekPOS: Int64;
     CurrentFileSeekPOS: Int64;
     State: Integer;
-    MemorySiz: nativeUInt;
-    procedure write(var wVal: TItem);
-    procedure read(var rVal: TItem);
+    MemorySiz: NativeUInt;
+    procedure Write(var wVal: TItem);
+    procedure Read(var rVal: TItem);
   end;
 
   PObjectDataCacheItem = ^TObjectDataCacheItem;
@@ -67,9 +67,9 @@ type
     FirstHeaderPOS: Int64;
     LastHeaderPOS: Int64;
     State: Integer;
-    MemorySiz: nativeUInt;
-    procedure write(var wVal: TField);
-    procedure read(var rVal: TField);
+    MemorySiz: NativeUInt;
+    procedure Write(var wVal: TField);
+    procedure Read(var rVal: TField);
   end;
 
   PObjectDataCacheField = ^TObjectDataCacheField;
@@ -116,17 +116,18 @@ type
     function NewHandle(Stream_: TCoreClassStream; const dbFile: SystemString; const dbItemID: Byte; dbOnlyRead, IsNewDB_: Boolean): Boolean; overload;
     function NewHandle(FixedStringL: Byte; Stream_: TCoreClassStream; const dbFile: SystemString; const dbItemID: Byte; dbOnlyRead, IsNewDB_: Boolean): Boolean; overload;
   public
-    // DoOpen Database from file
+    // Open Database
     constructor Open(const dbFile: SystemString; const dbItemID: Byte; dbOnlyRead: Boolean); overload;
-    // create new Database file
+    // create new Database
     constructor CreateNew(const dbFile: SystemString; const dbItemID: Byte); overload;
     constructor CreateNew(FixedStringL: Byte; const dbFile: SystemString; const dbItemID: Byte); overload;
-    // create or DoOpen Database for Stream IO
+    // create or Open form Stream IO
     constructor CreateAsStream(Stream_: TCoreClassStream;
       const dbFile: SystemString; const dbItemID: Byte; dbOnlyRead, isNewDB, DestroyTimeFreeStream: Boolean); overload;
     constructor CreateAsStream(FixedStringL: Byte; Stream_: TCoreClassStream;
       const dbFile: SystemString; const dbItemID: Byte; dbOnlyRead, isNewDB, DestroyTimeFreeStream: Boolean); overload;
 
+    // destroy
     destructor Destroy; override;
 
     function CopyTo(DestDB: TObjectDataManager): Boolean;
@@ -166,6 +167,8 @@ type
     procedure ExpItemToDisk(DBPath, DBItem, ExpFilename_: SystemString);
 
     // state
+    function Is_BACKUP_Mode: Boolean;
+    function Is_Flush_Mode: Boolean;
     function isAbort: Boolean;
     function Close: Boolean;
     function ErrorNo: Int64;
@@ -327,7 +330,7 @@ type
     procedure BuildDBCacheIntf;
     procedure FreeDBCacheIntf;
     procedure CleaupCache;
-    procedure SetPoolCache(const Value: Integer);
+    procedure ResetCachePool(const siz_: Integer);
     procedure UpdateIO; override;
     procedure Flush();
     function CacheStatus: SystemString;
@@ -339,7 +342,7 @@ type
     FLibList: TCoreClassStrings;
     FUseWildcard: Boolean;
     function GetItems(aIndex: Integer): TObjectDataManager;
-    function GetNames(AName: SystemString): TObjectDataManager;
+    function GetNames(Name_: SystemString): TObjectDataManager;
     procedure SetItems(aIndex: Integer; const Value: TObjectDataManager);
   public
     constructor Create(dbItemID: Byte);
@@ -352,14 +355,14 @@ type
     procedure Clear;
     function Count: Integer;
     procedure Delete(aIndex: Integer);
-    procedure DeleteFromName(AName: SystemString);
+    procedure DeleteFromName(Name_: SystemString);
     procedure UpdateAll;
     procedure Disable;
     procedure Enabled;
 
     property LibList: TCoreClassStrings read FLibList;
     property Items[aIndex: Integer]: TObjectDataManager read GetItems write SetItems;
-    property Names[AName: SystemString]: TObjectDataManager read GetNames; default;
+    property Names[Name_: SystemString]: TObjectDataManager read GetNames; default;
     property UseWildcard: Boolean read FUseWildcard write FUseWildcard;
     property ID: Byte read FID write FID;
   end;
@@ -441,10 +444,10 @@ begin
 
   // check crc
   swapCompleted := 0;
-  if swapHnd.read(swapTotal, C_Integer_Size) = C_Integer_Size then
+  if swapHnd.Read(swapTotal, C_Integer_Size) = C_Integer_Size then
     while swapHnd.Position < swapHnd.Size do
       begin
-        if swapHnd.read(swapHead, SizeOf(swapHead)) <> SizeOf(swapHead) then
+        if swapHnd.Read(swapHead, SizeOf(swapHead)) <> SizeOf(swapHead) then
           begin
             DoStatus('%s CRC header errors, the database will be restored to previous state', [umlGetFileName(swapFileName).Text]);
             CheckSuccessed := False;
@@ -488,10 +491,10 @@ begin
         begin
           swapCompleted := 0;
           swapHnd.Position := 0;
-          if swapHnd.read(swapTotal, C_Integer_Size) = C_Integer_Size then
+          if swapHnd.Read(swapTotal, C_Integer_Size) = C_Integer_Size then
             while swapHnd.Position < swapHnd.Size do
               begin
-                swapHnd.read(swapHead, SizeOf(swapHead));
+                swapHnd.Read(swapHead, SizeOf(swapHead));
                 m64.Clear;
                 m64.CopyFrom(swapHnd, swapHead.Size);
 
@@ -530,7 +533,7 @@ begin
   umlDeleteFile(swapFileName);
 end;
 
-procedure TObjectDataCacheItem.write(var wVal: TItem);
+procedure TObjectDataCacheItem.Write(var wVal: TItem);
 begin
   Description := wVal.Description;
   ExtID := wVal.ExtID;
@@ -544,7 +547,7 @@ begin
   MemorySiz := 0;
 end;
 
-procedure TObjectDataCacheItem.read(var rVal: TItem);
+procedure TObjectDataCacheItem.Read(var rVal: TItem);
 begin
   rVal.Description := Description;
   rVal.ExtID := ExtID;
@@ -557,7 +560,7 @@ begin
   rVal.State := State;
 end;
 
-procedure TObjectDataCacheField.write(var wVal: TField);
+procedure TObjectDataCacheField.Write(var wVal: TField);
 begin
   UpFieldPOS := wVal.UpFieldPOS;
   Description := wVal.Description;
@@ -568,7 +571,7 @@ begin
   MemorySiz := 0;
 end;
 
-procedure TObjectDataCacheField.read(var rVal: TField);
+procedure TObjectDataCacheField.Read(var rVal: TField);
 begin
   rVal.UpFieldPOS := UpFieldPOS;
   rVal.Description := Description;
@@ -812,7 +815,7 @@ begin
   m64 := TMemoryStream64.CustomCreate(1024 * 1024);
   SaveToStream(m64);
   m64.Position := 0;
-  ParallelCompressStream(TSelectCompressionMethod.scmZLIB_Max, m64, stream);
+  ParallelCompressMemory(TSelectCompressionMethod.scmZLIB_Max, m64, stream);
   DisposeObject(m64);
 end;
 
@@ -1038,7 +1041,7 @@ begin
                 DestDB.UpdateIO;
                 fs := TCoreClassFileStream.Create(fn, fmCreate);
                 DestDB.StreamEngine.Position := 0;
-                ParallelCompressStream(TSelectCompressionMethod.scmZLIB_Max, TMemoryStream64(DestDB.StreamEngine), fs);
+                ParallelCompressMemory(TSelectCompressionMethod.scmZLIB_Max, TMemoryStream64(DestDB.StreamEngine), fs);
                 DisposeObject(fs);
                 DisposeObject(DestDB);
 
@@ -1055,7 +1058,7 @@ begin
   DestDB.UpdateIO;
   fs := TCoreClassFileStream.Create(fn, fmCreate);
   DestDB.StreamEngine.Position := 0;
-  ParallelCompressStream(TSelectCompressionMethod.scmZLIB_Max, TMemoryStream64(DestDB.StreamEngine), fs);
+  ParallelCompressMemory(TSelectCompressionMethod.scmZLIB_Max, TMemoryStream64(DestDB.StreamEngine), fs);
   DisposeObject(fs);
   DisposeObject(DestDB);
 end;
@@ -1144,6 +1147,26 @@ begin
       end;
       ItemClose(itmHnd);
     end;
+end;
+
+function TObjectDataManager.Is_BACKUP_Mode: Boolean;
+begin
+{$IFDEF ZDB_BACKUP}
+  Result := FDBHandle.IOHnd.Handle is TReliableFileStream;
+{$ELSE ZDB_BACKUP}
+  Result := False;
+{$ENDIF ZDB_BACKUP}
+end;
+
+function TObjectDataManager.Is_Flush_Mode: Boolean;
+begin
+{$IFDEF ZDB_PHYSICAL_FLUSH}
+  Result := (not FDBHandle.IOHnd.IsOnlyRead)
+    and (FDBHandle.IOHnd.IsOpen)
+    and (FDBHandle.IOHnd.Handle is TReliableFileStream);
+{$ELSE ZDB_PHYSICAL_FLUSH}
+  Result := False;
+{$ENDIF ZDB_PHYSICAL_FLUSH}
 end;
 
 function TObjectDataManager.isAbort: Boolean;
@@ -1976,8 +1999,6 @@ begin
 end;
 
 procedure TObjectDataManagerOfCache.ItemReadProc(fPos: Int64; var rVal: TItem; var Done: Boolean);
-var
-  p: PObjectDataCacheItem;
 begin
   HeaderReadProc(fPos, rVal.RHeader, Done);
 
@@ -2030,11 +2051,11 @@ begin
   if p = nil then
     begin
       new(p);
-      p^.write(wVal);
+      p^.Write(wVal);
       FItemCache.Add(fPos, p, False);
     end
   else
-      p^.write(wVal);
+      p^.Write(wVal);
 
   p^.State := DB_Item_ok;
 end;
@@ -2061,14 +2082,14 @@ begin
           if Done then
             begin
               new(p);
-              p^.read(rVal);
+              p^.Read(rVal);
               FItemCache.Add(fPos, p, False);
               p^.State := DB_Item_ok;
             end;
         end;
     end
   else
-      p^.read(rVal);
+      p^.Read(rVal);
 end;
 
 procedure TObjectDataManagerOfCache.PrepareFieldWriteProc(fPos: Int64; var wVal: TField; var Done: Boolean);
@@ -2140,11 +2161,11 @@ begin
   if p = nil then
     begin
       new(p);
-      p^.write(wVal);
+      p^.Write(wVal);
       FFieldCache.Add(fPos, p, False);
     end
   else
-      p^.write(wVal);
+      p^.Write(wVal);
 
   p^.State := DB_Field_ok;
 end;
@@ -2171,14 +2192,14 @@ begin
           if Done then
             begin
               new(p);
-              p^.read(rVal);
+              p^.Read(rVal);
               FFieldCache.Add(fPos, p, False);
               p^.State := DB_Item_ok;
             end;
         end;
     end
   else
-      p^.read(rVal);
+      p^.Read(rVal);
 end;
 
 procedure TObjectDataManagerOfCache.PrepareTMDBWriteProc(fPos: Int64; const wVal: PObjectDataHandle; var Done: Boolean);
@@ -2234,23 +2255,23 @@ procedure TObjectDataManagerOfCache.DoOpenBefore;
 begin
   inherited DoOpenBefore;
 
-  FHeaderCache := TInt64HashPointerList.CustomCreate(10 * 10000);
+  FHeaderCache := TInt64HashPointerList.CustomCreate(if_(FDBHandle.IOHnd.Handle is TReliableFileStream, 10 * 10000, 1 * 10000));
   FHeaderCache.AutoFreeData := True;
   FHeaderCache.AccessOptimization := True;
 
-  FItemBlockCache := TInt64HashPointerList.CustomCreate(10 * 10000);
+  FItemBlockCache := TInt64HashPointerList.CustomCreate(if_(FDBHandle.IOHnd.Handle is TReliableFileStream, 10 * 10000, 1 * 10000));
   FItemBlockCache.AutoFreeData := True;
   FItemBlockCache.AccessOptimization := True;
 
-  FItemCache := TInt64HashPointerList.CustomCreate(10 * 10000);
+  FItemCache := TInt64HashPointerList.CustomCreate(if_(FDBHandle.IOHnd.Handle is TReliableFileStream, 10 * 10000, 1 * 10000));
   FItemCache.AutoFreeData := True;
   FItemCache.AccessOptimization := True;
 
-  FFieldCache := TInt64HashPointerList.CustomCreate(10 * 10000);
+  FFieldCache := TInt64HashPointerList.CustomCreate(if_(FDBHandle.IOHnd.Handle is TReliableFileStream, 10 * 10000, 1 * 10000));
   FFieldCache.AutoFreeData := True;
   FFieldCache.AccessOptimization := True;
 
-  FPrepareWritePool := TInt64HashObjectList.CustomCreate(40 * 10000);
+  FPrepareWritePool := TInt64HashObjectList.CustomCreate(if_(FDBHandle.IOHnd.Handle is TReliableFileStream, 4 * 10 * 10000, 4 * 1 * 10000));
   FPrepareWritePool.AutoFreeData := True;
   FPrepareWritePool.AccessOptimization := True;
 
@@ -2348,14 +2369,14 @@ begin
   FPrepareWritePool.Clear;
 end;
 
-procedure TObjectDataManagerOfCache.SetPoolCache(const Value: Integer);
+procedure TObjectDataManagerOfCache.ResetCachePool(const siz_: Integer);
 begin
   CleaupCache();
-  FHeaderCache.SetHashBlockCount(Value);
-  FItemBlockCache.SetHashBlockCount(Value);
-  FItemCache.SetHashBlockCount(Value);
-  FFieldCache.SetHashBlockCount(Value);
-  FPrepareWritePool.SetHashBlockCount(Value * 4);
+  FHeaderCache.SetHashBlockCount(if_(FDBHandle.IOHnd.Handle is TReliableFileStream, siz_, 1 * 10000));
+  FItemBlockCache.SetHashBlockCount(if_(FDBHandle.IOHnd.Handle is TReliableFileStream, siz_, 1 * 10000));
+  FItemCache.SetHashBlockCount(if_(FDBHandle.IOHnd.Handle is TReliableFileStream, siz_, 1 * 10000));
+  FFieldCache.SetHashBlockCount(if_(FDBHandle.IOHnd.Handle is TReliableFileStream, siz_, 1 * 10000));
+  FPrepareWritePool.SetHashBlockCount(if_(FDBHandle.IOHnd.Handle is TReliableFileStream, 4 * siz_, 4 * 1 * 10000));
 end;
 
 procedure TObjectDataManagerOfCache.UpdateIO;
@@ -2390,7 +2411,7 @@ begin
             swapHnd := TCoreClassFileStream.Create(swapFileName, fmCreate);
 
             swapTotal := FPrepareWritePool.Count;
-            swapHnd.write(swapTotal, C_Integer_Size);
+            swapHnd.Write(swapTotal, C_Integer_Size);
 
             i := 0;
             p := FPrepareWritePool.FirstPtr;
@@ -2403,8 +2424,8 @@ begin
                 swapHead.Size := m64.Size;
                 swapHead.MD5 := umlMD5(m64.Memory, m64.Size);
                 swapHead.Position := p^.i64;
-                swapHnd.write(swapHead, SizeOf(swapHead));
-                swapHnd.write(m64.Memory^, m64.Size);
+                swapHnd.Write(swapHead, SizeOf(swapHead));
+                swapHnd.Write(m64.Memory^, m64.Size);
                 inc(i);
                 p := p^.Next;
               end;
@@ -2420,7 +2441,7 @@ begin
         begin
           m64 := TMemoryStream64(p^.Data);
           FDBHandle.IOHnd.Handle.Position := p^.i64;
-          FDBHandle.IOHnd.Handle.write(m64.Memory^, m64.Size);
+          FDBHandle.IOHnd.Handle.Write(m64.Memory^, m64.Size);
           inc(i);
           p := p^.Next;
         end;
@@ -2444,13 +2465,13 @@ begin
   Result := TObjectDataManager(FLibList.Objects[aIndex]);
 end;
 
-function TObjectDataMarshal.GetNames(AName: SystemString): TObjectDataManager;
+function TObjectDataMarshal.GetNames(Name_: SystemString): TObjectDataManager;
 var
   i: Integer;
   aUName: SystemString;
 begin
   Result := nil;
-  aUName := GetAbsoluteFileName(AName);
+  aUName := GetAbsoluteFileName(Name_);
   if FLibList.Count > 0 then
     begin
       if FUseWildcard then
@@ -2629,12 +2650,12 @@ begin
   FLibList.Delete(aIndex);
 end;
 
-procedure TObjectDataMarshal.DeleteFromName(AName: SystemString);
+procedure TObjectDataMarshal.DeleteFromName(Name_: SystemString);
 var
   i: Integer;
   aUName: SystemString;
 begin
-  aUName := GetAbsoluteFileName(AName);
+  aUName := GetAbsoluteFileName(Name_);
   if FLibList.Count > 0 then
     begin
       if FUseWildcard then
