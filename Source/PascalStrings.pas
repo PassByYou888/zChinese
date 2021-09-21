@@ -174,6 +174,8 @@ type
 
   TP_String = TPascalString;
   PP_String = PPascalString;
+  TAtomSystemString = {$IFDEF FPC}specialize {$ENDIF FPC}TAtomVar<SystemString>;
+  TAtomPascalString = {$IFDEF FPC}specialize {$ENDIF FPC}TAtomVar<TPascalString>;
 
 function CharIn(c: SystemChar; const SomeChars: array of SystemChar): Boolean; overload;
 function CharIn(c: SystemChar; const SomeChar: SystemChar): Boolean; overload;
@@ -2101,7 +2103,8 @@ var
 begin
   swap_buff := PlatformBytes;
   buff_P := GetMemory(length(swap_buff) + 1);
-  CopyPtr(@swap_buff[0], buff_P, length(swap_buff));
+  if length(swap_buff) > 0 then
+      CopyPtr(@swap_buff[0], buff_P, length(swap_buff));
   buff_P^[length(swap_buff)] := 0;
   SetLength(swap_buff, 0);
   Result := buff_P;

@@ -46,12 +46,11 @@ type
     FOnCall: TIOThread_Call;
     FOnMethod: TIOThread_Method;
     FOnProc: TIOThread_Proc;
-    procedure Process;
   public
     Data: Pointer;
-    constructor Create;
+    constructor Create; virtual;
     destructor Destroy; override;
-    procedure Delete(); virtual;
+    procedure Process; virtual;
     property OnCall: TIOThread_Call read FOnCall write FOnCall;
     property OnMethod: TIOThread_Method read FOnMethod write FOnMethod;
     property OnProc: TIOThread_Proc read FOnProc write FOnProc;
@@ -67,15 +66,14 @@ type
   TIO_Interface = interface
     function Count(): Integer;
     property QueueCount: Integer read Count;
-    // encrypt input data to pool
     procedure EnQueue(Queue_: TIODataQueue); overload;
     procedure EnQueue(IOData: TIOData); overload;
     procedure EnQueueC(IOData: TIOData; Data: Pointer; OnCall: TIOThread_Call);
     procedure EnQueueM(IOData: TIOData; Data: Pointer; OnMethod: TIOThread_Method);
     procedure EnQueueP(IOData: TIOData; Data: Pointer; OnProc: TIOThread_Proc);
-    // decrypt data state is done from pool
     function DeQueue(wait_: Boolean): TIOData; overload;
     procedure DeQueue(wait_: Boolean; Queue_: TIODataQueue); overload;
+    procedure Wait;
   end;
 
   TIO_Thread = class(TCoreClassInterfacedObject, TIO_Interface)
@@ -94,15 +92,14 @@ type
 
     function Count(): Integer;
     property QueueCount: Integer read Count;
-    // encrypt input data to pool
     procedure EnQueue(Queue_: TIODataQueue); overload;
     procedure EnQueue(IOData: TIOData); overload;
     procedure EnQueueC(IOData: TIOData; Data: Pointer; OnCall: TIOThread_Call);
     procedure EnQueueM(IOData: TIOData; Data: Pointer; OnMethod: TIOThread_Method);
     procedure EnQueueP(IOData: TIOData; Data: Pointer; OnProc: TIOThread_Proc);
-    // decrypt data state is done from pool
     function DeQueue(wait_: Boolean): TIOData; overload;
     procedure DeQueue(wait_: Boolean; Queue_: TIODataQueue); overload;
+    procedure Wait;
 
     class procedure Test();
   end;
@@ -119,15 +116,14 @@ type
 
     function Count(): Integer;
     property QueueCount: Integer read Count;
-    // encrypt input data to pool
     procedure EnQueue(Queue_: TIODataQueue); overload;
     procedure EnQueue(IOData: TIOData); overload;
     procedure EnQueueC(IOData: TIOData; Data: Pointer; OnCall: TIOThread_Call);
     procedure EnQueueM(IOData: TIOData; Data: Pointer; OnMethod: TIOThread_Method);
     procedure EnQueueP(IOData: TIOData; Data: Pointer; OnProc: TIOThread_Proc);
-    // decrypt data state is done from pool
     function DeQueue(wait_: Boolean): TIOData; overload;
     procedure DeQueue(wait_: Boolean; Queue_: TIODataQueue); overload;
+    procedure Wait;
 
     class procedure Test();
   end;
@@ -138,7 +134,7 @@ type
   private
     FOwner: TPost_ThreadPool;
     FBindTh: TCompute;
-    FPost: TThreadProgressPost;
+    FPost: TThreadPost;
     FActivted: TAtomBool;
     procedure ThRun(thSender: TCompute);
   public
@@ -146,22 +142,22 @@ type
     destructor Destroy; override;
 
     property BindTh: TCompute read FBindTh;
-    property Post: TThreadProgressPost read FPost;
+    property Post: TThreadPost read FPost;
 
-    procedure PostC1(OnSync: TThreadProgressPostCall1);
-    procedure PostC2(Data1: Pointer; OnSync: TThreadProgressPostCall2);
-    procedure PostC3(Data1: Pointer; Data2: TCoreClassObject; Data3: Variant; OnSync: TThreadProgressPostCall3);
-    procedure PostC4(Data1: Pointer; Data2: TCoreClassObject; OnSync: TThreadProgressPostCall4);
+    procedure PostC1(OnSync: TThreadPostCall1);
+    procedure PostC2(Data1: Pointer; OnSync: TThreadPostCall2);
+    procedure PostC3(Data1: Pointer; Data2: TCoreClassObject; Data3: Variant; OnSync: TThreadPostCall3);
+    procedure PostC4(Data1: Pointer; Data2: TCoreClassObject; OnSync: TThreadPostCall4);
 
-    procedure PostM1(OnSync: TThreadProgressPostMethod1);
-    procedure PostM2(Data1: Pointer; OnSync: TThreadProgressPostMethod2);
-    procedure PostM3(Data1: Pointer; Data2: TCoreClassObject; Data3: Variant; OnSync: TThreadProgressPostMethod3);
-    procedure PostM4(Data1: Pointer; Data2: TCoreClassObject; OnSync: TThreadProgressPostMethod4);
+    procedure PostM1(OnSync: TThreadPostMethod1);
+    procedure PostM2(Data1: Pointer; OnSync: TThreadPostMethod2);
+    procedure PostM3(Data1: Pointer; Data2: TCoreClassObject; Data3: Variant; OnSync: TThreadPostMethod3);
+    procedure PostM4(Data1: Pointer; Data2: TCoreClassObject; OnSync: TThreadPostMethod4);
 
-    procedure PostP1(OnSync: TThreadProgressPostProc1);
-    procedure PostP2(Data1: Pointer; OnSync: TThreadProgressPostProc2);
-    procedure PostP3(Data1: Pointer; Data2: TCoreClassObject; Data3: Variant; OnSync: TThreadProgressPostProc3);
-    procedure PostP4(Data1: Pointer; Data2: TCoreClassObject; OnSync: TThreadProgressPostProc4);
+    procedure PostP1(OnSync: TThreadPostProc1);
+    procedure PostP2(Data1: Pointer; OnSync: TThreadPostProc2);
+    procedure PostP3(Data1: Pointer; Data2: TCoreClassObject; Data3: Variant; OnSync: TThreadPostProc3);
+    procedure PostP4(Data1: Pointer; Data2: TCoreClassObject; OnSync: TThreadPostProc4);
   end;
 
   TPost_ThreadPool_Decl = {$IFDEF FPC}specialize {$ENDIF FPC} TGenericsList<TPost_Thread>;
@@ -201,19 +197,6 @@ begin
   TCompute.Sleep(0);
 end;
 
-procedure TIOData.Process;
-begin
-  try
-    if Assigned(FOnCall) then
-        FOnCall(Self);
-    if Assigned(FOnMethod) then
-        FOnMethod(Self);
-    if Assigned(FOnProc) then
-        FOnProc(Self);
-  except
-  end;
-end;
-
 constructor TIOData.Create;
 begin
   inherited Create;
@@ -229,9 +212,17 @@ begin
   inherited Destroy;
 end;
 
-procedure TIOData.Delete;
+procedure TIOData.Process;
 begin
-  DisposeObject(Self);
+  try
+    if Assigned(FOnCall) then
+        FOnCall(Self);
+    if Assigned(FOnMethod) then
+        FOnMethod(Self);
+    if Assigned(FOnProc) then
+        FOnProc(Self);
+  except
+  end;
 end;
 
 procedure TIODataQueue.Clean;
@@ -296,6 +287,8 @@ begin
 
   for i := 0 to ThNum_ - 1 do
       TCompute.RunM({$IFDEF FPC}@{$ENDIF FPC}ThRun);
+  while FThNum < ThNum_ do
+      TCompute.Sleep(1);
 end;
 
 destructor TIO_Thread.Destroy;
@@ -316,6 +309,8 @@ begin
   FThNum := 0;
   for i := 0 to n - 1 do
       TCompute.RunM({$IFDEF FPC}@{$ENDIF FPC}ThRun);
+  while FThNum < n do
+      TCompute.Sleep(1);
 end;
 
 procedure TIO_Thread.ClearQueue();
@@ -448,6 +443,12 @@ begin
     if (wait_) and (n = 0) then
         TCompute.Sleep(1);
   until (not wait_) or (n = 0) or (doneNum = 0);
+end;
+
+procedure TIO_Thread.Wait;
+begin
+  while Count > 0 do
+      TCompute.Sleep(1);
 end;
 
 class procedure TIO_Thread.Test();
@@ -598,6 +599,12 @@ begin
   until (not wait_) or (n = 0) or (doneNum = 0);
 end;
 
+procedure TIO_Direct.Wait;
+begin
+  while Count > 0 do
+      TCompute.Sleep(1);
+end;
+
 class procedure TIO_Direct.Test;
 var
   i: Integer;
@@ -619,7 +626,7 @@ var
   LastTK, IdleTK: TTimeTick;
 begin
   FBindTh := thSender;
-  FPost := TThreadProgressPost.Create(thSender.ThreadID);
+  FPost := TThreadPost.Create(thSender.ThreadID);
   FPost.OneStep := False;
   FPost.ResetRandomSeed := False;
   FActivted := TAtomBool.Create(True);
@@ -663,62 +670,62 @@ begin
   inherited Destroy;
 end;
 
-procedure TPost_Thread.PostC1(OnSync: TThreadProgressPostCall1);
+procedure TPost_Thread.PostC1(OnSync: TThreadPostCall1);
 begin
   FPost.PostC1(OnSync);
 end;
 
-procedure TPost_Thread.PostC2(Data1: Pointer; OnSync: TThreadProgressPostCall2);
+procedure TPost_Thread.PostC2(Data1: Pointer; OnSync: TThreadPostCall2);
 begin
   FPost.PostC2(Data1, OnSync);
 end;
 
-procedure TPost_Thread.PostC3(Data1: Pointer; Data2: TCoreClassObject; Data3: Variant; OnSync: TThreadProgressPostCall3);
+procedure TPost_Thread.PostC3(Data1: Pointer; Data2: TCoreClassObject; Data3: Variant; OnSync: TThreadPostCall3);
 begin
   FPost.PostC3(Data1, Data2, Data3, OnSync);
 end;
 
-procedure TPost_Thread.PostC4(Data1: Pointer; Data2: TCoreClassObject; OnSync: TThreadProgressPostCall4);
+procedure TPost_Thread.PostC4(Data1: Pointer; Data2: TCoreClassObject; OnSync: TThreadPostCall4);
 begin
   FPost.PostC4(Data1, Data2, OnSync);
 end;
 
-procedure TPost_Thread.PostM1(OnSync: TThreadProgressPostMethod1);
+procedure TPost_Thread.PostM1(OnSync: TThreadPostMethod1);
 begin
   FPost.PostM1(OnSync);
 end;
 
-procedure TPost_Thread.PostM2(Data1: Pointer; OnSync: TThreadProgressPostMethod2);
+procedure TPost_Thread.PostM2(Data1: Pointer; OnSync: TThreadPostMethod2);
 begin
   FPost.PostM2(Data1, OnSync);
 end;
 
-procedure TPost_Thread.PostM3(Data1: Pointer; Data2: TCoreClassObject; Data3: Variant; OnSync: TThreadProgressPostMethod3);
+procedure TPost_Thread.PostM3(Data1: Pointer; Data2: TCoreClassObject; Data3: Variant; OnSync: TThreadPostMethod3);
 begin
   FPost.PostM3(Data1, Data2, Data3, OnSync);
 end;
 
-procedure TPost_Thread.PostM4(Data1: Pointer; Data2: TCoreClassObject; OnSync: TThreadProgressPostMethod4);
+procedure TPost_Thread.PostM4(Data1: Pointer; Data2: TCoreClassObject; OnSync: TThreadPostMethod4);
 begin
   FPost.PostM4(Data1, Data2, OnSync);
 end;
 
-procedure TPost_Thread.PostP1(OnSync: TThreadProgressPostProc1);
+procedure TPost_Thread.PostP1(OnSync: TThreadPostProc1);
 begin
   FPost.PostP1(OnSync);
 end;
 
-procedure TPost_Thread.PostP2(Data1: Pointer; OnSync: TThreadProgressPostProc2);
+procedure TPost_Thread.PostP2(Data1: Pointer; OnSync: TThreadPostProc2);
 begin
   FPost.PostP2(Data1, OnSync);
 end;
 
-procedure TPost_Thread.PostP3(Data1: Pointer; Data2: TCoreClassObject; Data3: Variant; OnSync: TThreadProgressPostProc3);
+procedure TPost_Thread.PostP3(Data1: Pointer; Data2: TCoreClassObject; Data3: Variant; OnSync: TThreadPostProc3);
 begin
   FPost.PostP3(Data1, Data2, Data3, OnSync);
 end;
 
-procedure TPost_Thread.PostP4(Data1: Pointer; Data2: TCoreClassObject; OnSync: TThreadProgressPostProc4);
+procedure TPost_Thread.PostP4(Data1: Pointer; Data2: TCoreClassObject; OnSync: TThreadPostProc4);
 begin
   FPost.PostP4(Data1, Data2, OnSync);
 end;

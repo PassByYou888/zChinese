@@ -38,6 +38,7 @@ interface
 uses
 {$IFDEF FPC}
   Dynlibs,
+  FPCGenericStructlist,
 {$IFDEF MSWINDOWS} Windows, {$ENDIF MSWINDOWS}
 {$ELSE FPC}
 {$IFDEF MSWINDOWS} Windows, {$ENDIF MSWINDOWS}
@@ -85,6 +86,7 @@ type
   P_String = PPascalString;
   U_Char = SystemChar;
   U_StringArray = array of U_SystemString;
+  U_ArrayString = U_StringArray;
 
   U_Bytes = TBytes;
 
@@ -257,11 +259,18 @@ function umlCombineUnixPath(const s1, s2: TPascalString): TPascalString;
 function umlCombineUnixFileName(const pathName, FileName: TPascalString): TPascalString;
 function umlCombineWinPath(const s1, s2: TPascalString): TPascalString;
 function umlCombineWinFileName(const pathName, FileName: TPascalString): TPascalString;
-function umlGetFileName(const s: TPascalString): TPascalString;
-function umlGetFilePath(const s: TPascalString): TPascalString;
+function umlGetFileName(platform_: TExecutePlatform; const s: TPascalString): TPascalString; overload;
+function umlGetFileName(const s: TPascalString): TPascalString; overload;
+function umlGetWindowsFileName(const s: TPascalString): TPascalString;
+function umlGetUnixFileName(const s: TPascalString): TPascalString;
+function umlGetFilePath(platform_: TExecutePlatform; const s: TPascalString): TPascalString; overload;
+function umlGetFilePath(const s: TPascalString): TPascalString; overload;
+function umlGetWindowsFilePath(const s: TPascalString): TPascalString;
+function umlGetUnixFilePath(const s: TPascalString): TPascalString;
 function umlChangeFileExt(const s, ext: TPascalString): TPascalString;
 function umlGetFileExt(const s: TPascalString): TPascalString;
 
+{ FileIO }
 procedure InitIOHnd(var IOHnd: TIOHnd);
 function umlFileCreateAsStream(const FileName: TPascalString; stream: U_Stream; var IOHnd: TIOHnd; OnlyRead_: Boolean): Boolean; overload;
 function umlFileCreateAsStream(const FileName: TPascalString; stream: U_Stream; var IOHnd: TIOHnd): Boolean; overload;
@@ -274,20 +283,16 @@ function umlFileOpen(const FileName: TPascalString; var IOHnd: TIOHnd; OnlyRead_
 function umlFileClose(var IOHnd: TIOHnd): Boolean;
 function umlFileUpdate(var IOHnd: TIOHnd): Boolean;
 function umlFileTest(var IOHnd: TIOHnd): Boolean;
-
 procedure umlResetPrepareRead(var IOHnd: TIOHnd);
 function umlFilePrepareRead(var IOHnd: TIOHnd; Size: Int64; var buff): Boolean;
 function umlFileRead(var IOHnd: TIOHnd; const Size: Int64; var buff): Boolean;
 function umlBlockRead(var IOHnd: TIOHnd; var buff; const Size: Int64): Boolean;
-
 function umlFilePrepareWrite(var IOHnd: TIOHnd): Boolean;
 function umlFileFlushWrite(var IOHnd: TIOHnd): Boolean;
 function umlFileWrite(var IOHnd: TIOHnd; const Size: Int64; var buff): Boolean;
 function umlBlockWrite(var IOHnd: TIOHnd; var buff; const Size: Int64): Boolean;
-
 function umlFileWriteFixedString(var IOHnd: TIOHnd; var Value: TPascalString): Boolean;
 function umlFileReadFixedString(var IOHnd: TIOHnd; var Value: TPascalString): Boolean;
-
 function umlFileSeek(var IOHnd: TIOHnd; Pos_: Int64): Boolean;
 function umlFileGetPOS(var IOHnd: TIOHnd): Int64;
 function umlFileSetSize(var IOHnd: TIOHnd; siz_: Int64): Boolean;
@@ -380,6 +385,7 @@ function umlPointerToStr(param: Pointer): TPascalString;
 
 function umlMBPSToStr(Size: Int64): TPascalString;
 function umlSizeToStr(Parameter: Int64): TPascalString;
+function umlStrToDateTime(s: TPascalString): TDateTime;
 function umlDateTimeToStr(t: TDateTime): TPascalString;
 function umlTimeTickToStr(const t: TTimeTick): TPascalString;
 function umlTimeToStr(t: TDateTime): TPascalString;
@@ -387,11 +393,12 @@ function umlDateToStr(t: TDateTime): TPascalString;
 function umlFloatToStr(const f: Double): TPascalString;
 function umlShortFloatToStr(const f: Double): TPascalString;
 
-function umlStrToInt(const _V: TPascalString): Integer; overload;
-function umlStrToInt(const _V: TPascalString; _Def: Integer): Integer; overload;
-function umlStrToInt64(const _V: TPascalString; _Def: Int64): Int64; overload;
-function umlStrToFloat(const _V: TPascalString; _Def: Double): Double; overload;
-function umlStrToFloat(const _V: TPascalString): Double; overload;
+function umlStrToInt(const V_: TPascalString): Integer; overload;
+function umlStrToInt(const V_: TPascalString; _Def: Integer): Integer; overload;
+function umlStrToInt64(const V_: TPascalString; _Def: Int64): Int64; overload;
+function umlStrToInt64(const V_: TPascalString): Int64; overload;
+function umlStrToFloat(const V_: TPascalString; _Def: Double): Double; overload;
+function umlStrToFloat(const V_: TPascalString): Double; overload;
 
 function umlMultipleMatch(IgnoreCase: Boolean; const SourceStr, TargetStr, umlMultipleString, umlMultipleCharacter: TPascalString): Boolean; overload;
 function umlMultipleMatch(IgnoreCase: Boolean; const SourceStr, TargetStr: TPascalString): Boolean; overload;
@@ -493,11 +500,13 @@ function umlTestBase64(const text: TPascalString): Boolean;
 type
   PMD5 = ^TMD5;
   TMD5 = array [0 .. 15] of Byte;
+  TMD5List = {$IFDEF FPC}specialize {$ENDIF FPC} TGenericsList<TMD5>;
 
 const
   NullMD5: TMD5 = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
   ZeroMD5: TMD5 = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
+procedure umlTransformMD5(var Accu; const Buf); inline;
 function umlMD5(const buffPtr: PByte; bufSiz: NativeUInt): TMD5;
 function umlMD5Char(const buffPtr: PByte; const BuffSize: NativeUInt): TPascalString;
 function umlMD5String(const buffPtr: PByte; const BuffSize: NativeUInt): TPascalString;
@@ -505,6 +514,7 @@ function umlStreamMD5(stream: TCoreClassStream; StartPos, EndPos: Int64): TMD5; 
 function umlStreamMD5(stream: TCoreClassStream): TMD5; overload;
 function umlStreamMD5Char(stream: TCoreClassStream): TPascalString; overload;
 function umlStreamMD5String(stream: TCoreClassStream): TPascalString; overload;
+function umlStreamMD5Str(stream: TCoreClassStream): TPascalString; overload;
 function umlStringMD5(const Value: TPascalString): TPascalString;
 function umlFileMD5___(FileName: TPascalString): TMD5; overload;
 function umlFileMD5(FileName: TPascalString; StartPos, EndPos: Int64): TMD5; overload;
@@ -646,7 +656,6 @@ function umlDivisionText(const buffer: TPascalString; width: Integer; DivisionAs
 
 function umlUpdateComponentName(const Name: TPascalString): TPascalString;
 function umlMakeComponentName(Owner: TCoreClassComponent; RefrenceName: TPascalString): TPascalString;
-
 procedure umlReadComponent(stream: TCoreClassStream; comp: TCoreClassComponent);
 procedure umlWriteComponent(stream: TCoreClassStream; comp: TCoreClassComponent);
 procedure umlCopyComponentDataTo(comp, copyto: TCoreClassComponent);
@@ -693,6 +702,12 @@ procedure SaveMemory(p: Pointer; siz: NativeInt; DestFile: TPascalString);
 function umlFileMD5(FileName: TPascalString): TMD5; overload;
 procedure umlCacheFileMD5(FileName: U_String);
 procedure umlCacheFileMD5FromDirectory(Directory_, Filter_: U_String);
+
+function umlBinToInt(Value: U_String): UInt64;
+function umlIntToBin(v: UInt64): U_String;
+
+var
+  Lib_DateTimeFormatSettings: TFormatSettings;
 
 implementation
 
@@ -1427,7 +1442,7 @@ end;
 
 function umlNow: Double;
 begin
-  Result := Now;
+  Result := Now();
 end;
 
 function umlDefaultAttrib: Integer;
@@ -1466,7 +1481,7 @@ end;
 
 function umlFileExists(const FileName: TPascalString): Boolean;
 begin
-  if FileName.Len > 0 then
+  if FileName.L > 0 then
       Result := FileExists(FileName.text)
   else
       Result := False;
@@ -1880,11 +1895,11 @@ begin
       Result.DeleteLast;
 end;
 
-function umlGetFileName(const s: TPascalString): TPascalString;
+function umlGetFileName(platform_: TExecutePlatform; const s: TPascalString): TPascalString;
 var
   n: TPascalString;
 begin
-  case CurrentPlatform of
+  case platform_ of
     epWin32, epWin64:
       begin
         n := umlCharReplace(umlTrimSpace(s), '/', '\');
@@ -1912,11 +1927,46 @@ begin
   end;
 end;
 
-function umlGetFilePath(const s: TPascalString): TPascalString;
+function umlGetFileName(const s: TPascalString): TPascalString;
+begin
+  Result := umlGetFileName(CurrentPlatform, s);
+end;
+
+function umlGetWindowsFileName(const s: TPascalString): TPascalString;
 var
   n: TPascalString;
 begin
-  case CurrentPlatform of
+  n := umlCharReplace(umlTrimSpace(s), '/', '\');
+  if n.Len = 0 then
+      Result := ''
+  else if (n.Last = '\') then
+      Result := ''
+  else if n.Exists('\') then
+      Result := umlGetLastStr(n, '\')
+  else
+      Result := n;
+end;
+
+function umlGetUnixFileName(const s: TPascalString): TPascalString;
+var
+  n: TPascalString;
+begin
+  n := umlCharReplace(umlTrimSpace(s), '\', '/');
+  if n.Len = 0 then
+      Result := ''
+  else if (n.Last = '/') then
+      Result := ''
+  else if n.Exists('/') then
+      Result := umlGetLastStr(n, '/')
+  else
+      Result := n;
+end;
+
+function umlGetFilePath(platform_: TExecutePlatform; const s: TPascalString): TPascalString;
+var
+  n: TPascalString;
+begin
+  case platform_ of
     epWin32, epWin64:
       begin
         n := umlCharReplace(umlTrimSpace(s), '/', '\');
@@ -1944,6 +1994,43 @@ begin
             Result := n;
       end;
   end;
+end;
+
+function umlGetFilePath(const s: TPascalString): TPascalString;
+begin
+  Result := umlGetFilePath(CurrentPlatform, s);
+end;
+
+function umlGetWindowsFilePath(const s: TPascalString): TPascalString;
+var
+  n: TPascalString;
+begin
+  n := umlCharReplace(umlTrimSpace(s), '/', '\');
+  if n.Len = 0 then
+      Result := ''
+  else if not n.Exists('\') then
+      Result := ''
+  else if (n.Last <> '\') then
+      Result := umlDeleteLastStr(n, '\')
+  else
+      Result := n;
+  if umlMultipleMatch('?:', Result) then
+      Result.Append('\');
+end;
+
+function umlGetUnixFilePath(const s: TPascalString): TPascalString;
+var
+  n: TPascalString;
+begin
+  n := umlCharReplace(umlTrimSpace(s), '\', '/');
+  if n.Len = 0 then
+      Result := ''
+  else if not n.Exists('/') then
+      Result := ''
+  else if (n.Last <> '/') then
+      Result := umlDeleteLastStr(n, '/')
+  else
+      Result := n;
 end;
 
 function umlChangeFileExt(const s, ext: TPascalString): TPascalString;
@@ -3643,11 +3730,11 @@ begin
   if Size < 1 shl 10 then
       Result := Format('%d', [Size])
   else if Size < 1 shl 20 then
-      Result := Format('%fKb', [Size / (1 shl 10)])
+      Result := Format('%f Kb', [Size / (1 shl 10)])
   else if Size < 1 shl 30 then
-      Result := Format('%fM', [Size / (1 shl 20)])
+      Result := Format('%f M', [Size / (1 shl 20)])
   else
-      Result := Format('%fG', [Size / (1 shl 30)])
+      Result := Format('%f G', [Size / (1 shl 30)])
 end;
 
 function umlIntToStr(Parameter: Single): TPascalString;
@@ -3673,13 +3760,13 @@ end;
 function umlMBPSToStr(Size: Int64): TPascalString;
 begin
   if Size < 1 shl 10 then
-      Result := Format('%dbps', [Size * 10])
+      Result := Format('%d bps', [Size * 10])
   else if Size < 1 shl 20 then
-      Result := Format('%fKbps', [Size / (1 shl 10) * 10])
+      Result := Format('%f Kbps', [Size / (1 shl 10) * 10])
   else if Size < 1 shl 30 then
-      Result := Format('%fMbps', [Size / (1 shl 20) * 10])
+      Result := Format('%f Mbps', [Size / (1 shl 20) * 10])
   else
-      Result := Format('%fGbps', [Size / (1 shl 30) * 10])
+      Result := Format('%f Gbps', [Size / (1 shl 30) * 10])
 end;
 
 function umlSizeToStr(Parameter: Int64): TPascalString;
@@ -3691,9 +3778,14 @@ begin
   end;
 end;
 
+function umlStrToDateTime(s: TPascalString): TDateTime;
+begin
+  Result := StrToDateTime(s.text, Lib_DateTimeFormatSettings);
+end;
+
 function umlDateTimeToStr(t: TDateTime): TPascalString;
 begin
-  Result := DateTimeToStr(t);
+  Result := DateTimeToStr(t, Lib_DateTimeFormatSettings);
 end;
 
 function umlTimeTickToStr(const t: TTimeTick): TPascalString;
@@ -3734,12 +3826,12 @@ end;
 
 function umlTimeToStr(t: TDateTime): TPascalString;
 begin
-  Result := TimeToStr(t);
+  Result := TimeToStr(t, Lib_DateTimeFormatSettings);
 end;
 
 function umlDateToStr(t: TDateTime): TPascalString;
 begin
-  Result := DateToStr(t);
+  Result := DateToStr(t, Lib_DateTimeFormatSettings);
 end;
 
 function umlFloatToStr(const f: Double): TPascalString;
@@ -3752,17 +3844,17 @@ begin
   Result := Format('%f', [f]);
 end;
 
-function umlStrToInt(const _V: TPascalString): Integer;
+function umlStrToInt(const V_: TPascalString): Integer;
 begin
-  Result := umlStrToInt(_V, 0);
+  Result := umlStrToInt(V_, 0);
 end;
 
-function umlStrToInt(const _V: TPascalString; _Def: Integer): Integer;
+function umlStrToInt(const V_: TPascalString; _Def: Integer): Integer;
 begin
-  if umlIsNumber(_V) then
+  if umlIsNumber(V_) then
     begin
       try
-          Result := StrToInt(_V.text);
+          Result := StrToInt(V_.text);
       except
           Result := _Def;
       end;
@@ -3771,12 +3863,12 @@ begin
       Result := _Def;
 end;
 
-function umlStrToInt64(const _V: TPascalString; _Def: Int64): Int64;
+function umlStrToInt64(const V_: TPascalString; _Def: Int64): Int64;
 begin
-  if umlIsNumber(_V) then
+  if umlIsNumber(V_) then
     begin
       try
-          Result := StrToInt64(_V.text);
+          Result := StrToInt64(V_.text);
       except
           Result := _Def;
       end;
@@ -3785,12 +3877,17 @@ begin
       Result := _Def;
 end;
 
-function umlStrToFloat(const _V: TPascalString; _Def: Double): Double;
+function umlStrToInt64(const V_: TPascalString): Int64;
 begin
-  if umlIsNumber(_V) then
+  Result := umlStrToInt64(V_, 0);
+end;
+
+function umlStrToFloat(const V_: TPascalString; _Def: Double): Double;
+begin
+  if umlIsNumber(V_) then
     begin
       try
-          Result := StrToFloat(_V.text);
+          Result := StrToFloat(V_.text);
       except
           Result := _Def;
       end;
@@ -3799,9 +3896,9 @@ begin
       Result := _Def;
 end;
 
-function umlStrToFloat(const _V: TPascalString): Double;
+function umlStrToFloat(const V_: TPascalString): Double;
 begin
-  Result := umlStrToFloat(_V, 0);
+  Result := umlStrToFloat(V_, 0);
 end;
 
 function umlMultipleMatch(IgnoreCase: Boolean; const SourceStr, TargetStr, umlMultipleString, umlMultipleCharacter: TPascalString): Boolean;
@@ -5010,7 +5107,12 @@ begin
       SetLength(dest, 0);
 end;
 
-procedure umlTransformMD5(var Accu; var Buf); inline;
+procedure umlTransformMD5(var Accu; const Buf); inline;
+{$IF Defined(FastMD5) and Defined(Delphi) and (Defined(WIN32) or Defined(WIN64))}
+begin
+  MD5_Transform(Accu, Buf);
+end;
+{$ELSE}
   function ROL(const x: Cardinal; const n: Byte): Cardinal; inline;
   begin
     Result := (x shl n) or (x shr (32 - n))
@@ -5117,6 +5219,8 @@ begin
   inc(TDigestCardinal(Accu)[2], c);
   inc(TDigestCardinal(Accu)[3], d)
 end;
+{$IFEND}
+
 
 function umlMD5(const buffPtr: PByte; bufSiz: NativeUInt): TMD5;
 {$IF Defined(FastMD5) and Defined(Delphi) and (Defined(WIN32) or Defined(WIN64))}
@@ -5307,6 +5411,11 @@ begin
 end;
 
 function umlStreamMD5String(stream: TCoreClassStream): TPascalString;
+begin
+  Result := umlMD5ToStr(umlStreamMD5(stream));
+end;
+
+function umlStreamMD5Str(stream: TCoreClassStream): TPascalString;
 begin
   Result := umlMD5ToStr(umlStreamMD5(stream));
 end;
@@ -6941,11 +7050,50 @@ begin
   TCompute.RunC(p, nil, {$IFDEF FPC}@{$ENDIF FPC}DoCacheFileMD5FromDirectory);
 end;
 
+function umlBinToInt(Value: U_String): UInt64;
+var
+  i, Size: Integer;
+begin
+  Result := 0;
+  Size := Value.L;
+  for i := Size downto 1 do
+    begin
+      if Value[i] = '1' then
+          Result := Result + (1 shl (Size - i));
+    end;
+end;
+
+function umlIntToBin(v: UInt64): U_String;
+begin
+  if v = 0 then
+    begin
+      Result := '0';
+      exit;
+    end;
+  Result := '';
+  while v > 0 do
+    begin
+      if v and $1 = 1 then
+          Result := '1' + Result
+      else
+          Result := '0' + Result;
+      v := v shr 1;
+    end;
+  while Result.First = '0' do
+      Result.DeleteFirst;
+end;
+
 initialization
 
 FileMD5Cache := TFileMD5Cache.Create;
 CacheFileMD5FromDirectory_Num := 0;
 CacheThreadIsAcivted := True;
+
+Lib_DateTimeFormatSettings := FormatSettings;
+Lib_DateTimeFormatSettings.ShortDateFormat := 'yyyy-MM-dd';
+Lib_DateTimeFormatSettings.DateSeparator := '-';
+Lib_DateTimeFormatSettings.TimeSeparator := ':';
+Lib_DateTimeFormatSettings.LongTimeFormat := 'hh:mm:ss:zzz';
 
 finalization
 

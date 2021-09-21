@@ -71,6 +71,7 @@ type
     procedure NewParam(source: TMem64); overload;
     procedure SwapInstance(source: TMemoryStream64); overload;
     procedure SwapInstance(source: TMem64); overload;
+    function ToBytes: TBytes;
 
     property Delta: NativeInt read FDelta write FDelta;
     procedure SetPointerWithProtectedMode(buffPtr: Pointer; const BuffSize: Int64);
@@ -144,6 +145,7 @@ type
   end;
 
   TStream64 = TMemoryStream64;
+  TMS64 = TMemoryStream64;
 
   TMemoryStream64List_Decl = {$IFDEF FPC}specialize {$ENDIF FPC} TGenericsList<TMemoryStream64>;
 
@@ -153,6 +155,27 @@ type
   end;
 
   TStream64List = TMemoryStream64List;
+  TMS64List = TMemoryStream64List;
+
+  TMemoryStream64ThreadList = class(TMemoryStream64List_Decl)
+  private
+    FCritical: TCritical;
+  public
+    AutoFreeRaster: Boolean;
+    constructor Create;
+    destructor Destroy; override;
+    procedure Lock;
+    procedure UnLock;
+    procedure Remove(obj: TMemoryStream64);
+    procedure Delete(index: Integer);
+    procedure Clear;
+    procedure Clean;
+  end;
+
+  TStream64CriticalList = TMemoryStream64ThreadList;
+  TMS64CriticalList = TMemoryStream64ThreadList;
+  TStream64ThreadList = TMemoryStream64ThreadList;
+  TMS64ThreadList = TMemoryStream64ThreadList;
 
   IMemoryStream64WriteTrigger = interface
     procedure TriggerWrite64(Count: Int64);
@@ -223,6 +246,7 @@ type
     procedure NewParam(source: TMem64); overload;
     procedure SwapInstance(source: TMemoryStream64); overload;
     procedure SwapInstance(source: TMem64); overload;
+    function ToBytes: TBytes;
 
     property Delta: NativeInt read GetDelta write SetDelta;
     property Memory: Pointer read GetMemory_;
@@ -250,6 +274,8 @@ type
     function ReadPtr(const p: Pointer; Count: Int64): Int64;
     function read(var buffer; Count: Int64): Int64;
     function Seek(const Offset: Int64; origin: TSeekOrigin): Int64;
+
+    function CopyFrom(const source: TCoreClassStream; Count: Int64): Int64;
 
     // Serialized writer
     procedure WriteBool(const buff: Boolean);
@@ -288,12 +314,16 @@ type
     function ReadMD5: TMD5;
   end;
 
+  TM64 = TMem64;
+
   TMem64List_Decl = {$IFDEF FPC}specialize {$ENDIF FPC} TGenericsList<TMem64>;
 
   TMem64List = class(TMem64List_Decl)
   public
     procedure Clean;
   end;
+
+  TM64List = TMem64List;
 
 {$IFDEF FPC}
 
@@ -324,7 +354,8 @@ function DecompressStreamToPtr(sour: TCoreClassStream; var dest: Pointer): Boole
 function CompressFile(sour, dest: SystemString): Boolean;
 function DecompressFile(sour, dest: SystemString): Boolean;
 function SelectCompressStream(const scm: TSelectCompressionMethod; const sour, dest: TCoreClassStream): Boolean;
-function SelectDecompressStream(const sour, dest: TCoreClassStream): Boolean;
+function SelectDecompressStream(const sour, dest: TCoreClassStream): Boolean; overload;
+function SelectDecompressStream(const sour, dest: TCoreClassStream; var scm: TSelectCompressionMethod): Boolean; overload;
 procedure ParallelCompressMemory(const scm: TSelectCompressionMethod; const StripNum_: Integer; const sour: TMemoryStream64; const dest: TCoreClassStream); overload;
 procedure ParallelCompressMemory(const scm: TSelectCompressionMethod; const sour: TMemoryStream64; const dest: TCoreClassStream); overload;
 procedure ParallelCompressMemory(const sour: TMemoryStream64; const dest: TCoreClassStream); overload;
@@ -333,6 +364,38 @@ procedure ParallelCompressFile(const sour, dest: SystemString);
 procedure ParallelDecompressFile(const sour, dest: SystemString);
 function CompressUTF8(const sour_: TBytes): TBytes;
 function DecompressUTF8(const sour_: TBytes): TBytes;
+
+// Serialized api
+procedure StreamWriteBool(const stream: TCoreClassStream; const buff: Boolean);
+procedure StreamWriteInt8(const stream: TCoreClassStream; const buff: ShortInt);
+procedure StreamWriteInt16(const stream: TCoreClassStream; const buff: SmallInt);
+procedure StreamWriteInt32(const stream: TCoreClassStream; const buff: Integer);
+procedure StreamWriteInt64(const stream: TCoreClassStream; const buff: Int64);
+procedure StreamWriteUInt8(const stream: TCoreClassStream; const buff: Byte);
+procedure StreamWriteUInt16(const stream: TCoreClassStream; const buff: Word);
+procedure StreamWriteUInt32(const stream: TCoreClassStream; const buff: Cardinal);
+procedure StreamWriteUInt64(const stream: TCoreClassStream; const buff: UInt64);
+procedure StreamWriteSingle(const stream: TCoreClassStream; const buff: Single);
+procedure StreamWriteDouble(const stream: TCoreClassStream; const buff: Double);
+procedure StreamWriteCurrency(const stream: TCoreClassStream; const buff: Currency);
+procedure StreamWriteString(const stream: TCoreClassStream; const buff: TPascalString);
+function ComputeStreamWriteStringSize(buff: TPascalString): Integer;
+procedure StreamWriteMD5(const stream: TCoreClassStream; const buff: TMD5);
+function StreamReadBool(const stream: TCoreClassStream): Boolean;
+function StreamReadInt8(const stream: TCoreClassStream): ShortInt;
+function StreamReadInt16(const stream: TCoreClassStream): SmallInt;
+function StreamReadInt32(const stream: TCoreClassStream): Integer;
+function StreamReadInt64(const stream: TCoreClassStream): Int64;
+function StreamReadUInt8(const stream: TCoreClassStream): Byte;
+function StreamReadUInt16(const stream: TCoreClassStream): Word;
+function StreamReadUInt32(const stream: TCoreClassStream): Cardinal;
+function StreamReadUInt64(const stream: TCoreClassStream): UInt64;
+function StreamReadSingle(const stream: TCoreClassStream): Single;
+function StreamReadDouble(const stream: TCoreClassStream): Double;
+function StreamReadCurrency(const stream: TCoreClassStream): Currency;
+function StreamReadString(const stream: TCoreClassStream): TPascalString;
+function StreamReadMD5(const stream: TCoreClassStream): TMD5;
+
 procedure DoStatus(const v: TMemoryStream64); overload;
 procedure DoStatus(const v: TMem64); overload;
 
@@ -525,6 +588,13 @@ begin
   source.FProtectedMode := FProtectedMode_;
 end;
 
+function TMemoryStream64.ToBytes: TBytes;
+begin
+  SetLength(Result, Size);
+  if Size > 0 then
+      CopyPtr(Memory, @Result[0], Size);
+end;
+
 procedure TMemoryStream64.SetPointerWithProtectedMode(buffPtr: Pointer; const BuffSize: Int64);
 begin
   Clear;
@@ -581,6 +651,15 @@ begin
   if FProtectedMode then
       Exit;
 
+  if stream is TMemoryStream64 then
+    begin
+      Clear;
+      if TMemoryStream64(stream).Size > 0 then
+          WritePtr(TMemoryStream64(stream).Memory, TMemoryStream64(stream).Size);
+      Position := 0;
+      Exit;
+    end;
+
   stream.Position := 0;
   SetSize(stream.Size);
   if stream.Size > 0 then
@@ -633,6 +712,15 @@ var
   Num: NativeInt;
   Rest: NativeInt;
 begin
+  if stream is TMemoryStream64 then
+    begin
+      TMemoryStream64(stream).Clear;
+      if Size > 0 then
+          TMemoryStream64(stream).WritePtr(Memory, Size);
+      TMemoryStream64(stream).Position := 0;
+      Exit;
+    end;
+
   if Size > 0 then
     begin
       p := FMemory;
@@ -1095,6 +1183,66 @@ begin
   Clear;
 end;
 
+constructor TMemoryStream64ThreadList.Create;
+begin
+  inherited Create;
+  FCritical := TCritical.Create;
+  AutoFreeRaster := False;
+end;
+
+destructor TMemoryStream64ThreadList.Destroy;
+begin
+  DisposeObject(FCritical);
+  Clear;
+  inherited Destroy;
+end;
+
+procedure TMemoryStream64ThreadList.Lock;
+begin
+  FCritical.Lock;
+end;
+
+procedure TMemoryStream64ThreadList.UnLock;
+begin
+  FCritical.UnLock;
+end;
+
+procedure TMemoryStream64ThreadList.Remove(obj: TMemoryStream64);
+begin
+  if AutoFreeRaster then
+      DisposeObject(obj);
+  inherited Remove(obj);
+end;
+
+procedure TMemoryStream64ThreadList.Delete(index: Integer);
+begin
+  if (index >= 0) and (index < Count) then
+    begin
+      if AutoFreeRaster then
+          DisposeObject(Items[index]);
+      inherited Delete(index);
+    end;
+end;
+
+procedure TMemoryStream64ThreadList.Clear;
+var
+  i: Integer;
+begin
+  if AutoFreeRaster then
+    for i := 0 to Count - 1 do
+        DisposeObject(Items[i]);
+  inherited Clear;
+end;
+
+procedure TMemoryStream64ThreadList.Clean;
+var
+  i: Integer;
+begin
+  for i := 0 to Count - 1 do
+      DisposeObject(Items[i]);
+  inherited Clear;
+end;
+
 constructor TMemoryStream64OfWriteTrigger.Create(ATrigger: IMemoryStream64WriteTrigger);
 begin
   inherited Create;
@@ -1374,6 +1522,13 @@ begin
   source.FProtectedMode := FProtectedMode_;
 end;
 
+function TMem64.ToBytes: TBytes;
+begin
+  SetLength(Result, Size);
+  if Size > 0 then
+      CopyPtr(Memory, @Result[0], Size);
+end;
+
 procedure TMem64.SetPointerWithProtectedMode(buffPtr: Pointer; const BuffSize: Int64);
 begin
   Clear;
@@ -1599,6 +1754,53 @@ begin
     TSeekOrigin.soEnd: FPosition := FSize + Offset;
   end;
   Result := FPosition;
+end;
+
+function TMem64.CopyFrom(const source: TCoreClassStream; Count: Int64): Int64;
+const
+  MaxBufSize = $F000;
+var
+  BufSize, n: Int64;
+  buffer: PByte;
+begin
+  if FProtectedMode then
+      RaiseInfo('protected mode');
+
+  if source is TMemoryStream64 then
+    begin
+      WritePtr(TMemoryStream64(source).PositionAsPtr, Count);
+      TMemoryStream64(source).Position := TMemoryStream64(source).FPosition + Count;
+      Result := Count;
+      Exit;
+    end;
+
+  if Count <= 0 then
+    begin
+      source.Position := 0;
+      Count := source.Size;
+    end;
+
+  Result := Count;
+  if Count > MaxBufSize then
+      BufSize := MaxBufSize
+  else
+      BufSize := Count;
+
+  buffer := System.GetMemory(BufSize);
+  try
+    while Count <> 0 do
+      begin
+        if Count > BufSize then
+            n := BufSize
+        else
+            n := Count;
+        source.read(buffer^, n);
+        WritePtr(buffer, n);
+        dec(Count, n);
+      end;
+  finally
+      System.FreeMem(buffer);
+  end;
 end;
 
 procedure TMem64.WriteBool(const buff: Boolean);
@@ -1989,15 +2191,22 @@ end;
 
 function SelectDecompressStream(const sour, dest: TCoreClassStream): Boolean;
 var
-  scm: Byte;
+  scm: TSelectCompressionMethod;
+begin
+  Result := SelectDecompressStream(sour, dest, scm);
+end;
+
+function SelectDecompressStream(const sour, dest: TCoreClassStream; var scm: TSelectCompressionMethod): Boolean;
+var
+  scm_: Byte;
   siz_: Int64;
 begin
   Result := False;
-  if sour.read(scm, 1) <> 1 then
+  if sour.read(scm_, 1) <> 1 then
       Exit;
-
+  scm := TSelectCompressionMethod(scm_);
   try
-    case TSelectCompressionMethod(scm) of
+    case scm of
       scmNone:
         begin
           if sour.read(siz_, 8) <> 8 then
@@ -2352,6 +2561,173 @@ var
 begin
   buff := CompressUTF8(TPascalString('123456789abcdefg1111111111111111111111111111111111111').Bytes);
   s.Bytes := DecompressUTF8(buff);
+end;
+
+procedure StreamWriteBool(const stream: TCoreClassStream; const buff: Boolean);
+begin
+  stream.write(buff, 1);
+end;
+
+procedure StreamWriteInt8(const stream: TCoreClassStream; const buff: ShortInt);
+begin
+  stream.write(buff, 1);
+end;
+
+procedure StreamWriteInt16(const stream: TCoreClassStream; const buff: SmallInt);
+begin
+  stream.write(buff, 2);
+end;
+
+procedure StreamWriteInt32(const stream: TCoreClassStream; const buff: Integer);
+begin
+  stream.write(buff, 4);
+end;
+
+procedure StreamWriteInt64(const stream: TCoreClassStream; const buff: Int64);
+begin
+  stream.write(buff, 8);
+end;
+
+procedure StreamWriteUInt8(const stream: TCoreClassStream; const buff: Byte);
+begin
+  stream.write(buff, 1);
+end;
+
+procedure StreamWriteUInt16(const stream: TCoreClassStream; const buff: Word);
+begin
+  stream.write(buff, 2);
+end;
+
+procedure StreamWriteUInt32(const stream: TCoreClassStream; const buff: Cardinal);
+begin
+  stream.write(buff, 4);
+end;
+
+procedure StreamWriteUInt64(const stream: TCoreClassStream; const buff: UInt64);
+begin
+  stream.write(buff, 8);
+end;
+
+procedure StreamWriteSingle(const stream: TCoreClassStream; const buff: Single);
+begin
+  stream.write(buff, 4);
+end;
+
+procedure StreamWriteDouble(const stream: TCoreClassStream; const buff: Double);
+begin
+  stream.write(buff, 8);
+end;
+
+procedure StreamWriteCurrency(const stream: TCoreClassStream; const buff: Currency);
+begin
+  StreamWriteDouble(stream, buff);
+end;
+
+procedure StreamWriteString(const stream: TCoreClassStream; const buff: TPascalString);
+var
+  b: TBytes;
+begin
+  b := buff.Bytes;
+  StreamWriteUInt32(stream, Length(b));
+  if Length(b) > 0 then
+    begin
+      stream.write(b[0], Length(b));
+      SetLength(b, 0);
+    end;
+end;
+
+function ComputeStreamWriteStringSize(buff: TPascalString): Integer;
+var
+  b: TBytes;
+begin
+  b := buff.Bytes;
+  Result := 4 + Length(b);
+  SetLength(b, 0);
+end;
+
+procedure StreamWriteMD5(const stream: TCoreClassStream; const buff: TMD5);
+begin
+  stream.write(buff, 16);
+end;
+
+function StreamReadBool(const stream: TCoreClassStream): Boolean;
+begin
+  stream.read(Result, 1);
+end;
+
+function StreamReadInt8(const stream: TCoreClassStream): ShortInt;
+begin
+  stream.read(Result, 1);
+end;
+
+function StreamReadInt16(const stream: TCoreClassStream): SmallInt;
+begin
+  stream.read(Result, 2);
+end;
+
+function StreamReadInt32(const stream: TCoreClassStream): Integer;
+begin
+  stream.read(Result, 4);
+end;
+
+function StreamReadInt64(const stream: TCoreClassStream): Int64;
+begin
+  stream.read(Result, 8);
+end;
+
+function StreamReadUInt8(const stream: TCoreClassStream): Byte;
+begin
+  stream.read(Result, 1);
+end;
+
+function StreamReadUInt16(const stream: TCoreClassStream): Word;
+begin
+  stream.read(Result, 2);
+end;
+
+function StreamReadUInt32(const stream: TCoreClassStream): Cardinal;
+begin
+  stream.read(Result, 4);
+end;
+
+function StreamReadUInt64(const stream: TCoreClassStream): UInt64;
+begin
+  stream.read(Result, 8);
+end;
+
+function StreamReadSingle(const stream: TCoreClassStream): Single;
+begin
+  stream.read(Result, 4);
+end;
+
+function StreamReadDouble(const stream: TCoreClassStream): Double;
+begin
+  stream.read(Result, 8);
+end;
+
+function StreamReadCurrency(const stream: TCoreClassStream): Currency;
+begin
+  Result := StreamReadDouble(stream);
+end;
+
+function StreamReadString(const stream: TCoreClassStream): TPascalString;
+var
+  L: Cardinal;
+  b: TBytes;
+begin
+  L := StreamReadUInt32(stream);
+  if L > 0 then
+    begin
+      SetLength(b, L);
+      stream.read(b[0], L);
+      Result.Bytes := b;
+      SetLength(b, 0);
+    end;
+end;
+
+function StreamReadMD5(const stream: TCoreClassStream): TMD5;
+begin
+  stream.read(Result, 16);
 end;
 
 procedure DoStatus(const v: TMemoryStream64);

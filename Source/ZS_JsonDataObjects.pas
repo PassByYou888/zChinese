@@ -42,13 +42,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 *****************************************************************************)
 
+{$IFDEF FPC}
+unit ZS_JsonDataObjects;
+interface
+implementation
+end.
+{$ELSE FPC}
+unit ZS_JsonDataObjects;
 {$A8,B-,C+,E-,F-,G+,H+,I+,J-,K-,M-,N-,O+,P+,Q-,R-,S-,T-,U-,V+,W-,X+,Z1}
 {$WARN WIDECHAR_REDUCED OFF} // All sets only use ASCII chars (<=#127) and the compiler generates the >=#128 check itself
 {$STRINGCHECKS OFF} // It only slows down Delphi strings, doesn't help C++Builder migration and is finally gone in XE+
 {$WARN SYMBOL_DEPRECATED OFF} // for StrLen/StrLComp
 {$POINTERMATH ON}
-
-unit ZS_JsonDataObjects;
 
 {$IFDEF VER200}
   // Delphi 2009's ErrorInsight parser uses the CompilerVersion's memory address instead of 20.0, failing all the
@@ -88,7 +93,8 @@ unit ZS_JsonDataObjects;
 {$ENDIF EXTERNALLINKER}
 
 // Enables the progress callback feature
-{$DEFINE SUPPORT_PROGRESS}
+// {$DEFINE SUPPORT_PROGRESS}
+{$UNDEF SUPPORT_PROGRESS}
 
 // Sanity checks all array index accesses and raise an EListError exception.
 {$DEFINE CHECK_ARRAY_INDEX}
@@ -151,7 +157,7 @@ unit ZS_JsonDataObjects;
 interface
 
 uses
-  PascalStrings,
+  CoreClasses, PascalStrings, MemoryStream64,
   {$IFDEF HAS_UNIT_SCOPE}
   System.SysUtils, System.Classes;
   {$ELSE}
@@ -693,8 +699,11 @@ type
     // Short names
     property S[Index: Integer]: string read GetString write SetString;
     property I[Index: Integer]: Integer read GetInt write SetInt;
+    property I32[Index: Integer]: Integer read GetInt write SetInt;
     property L[Index: Integer]: Int64 read GetLong write SetLong;
+    property I64[Index: Integer]: Int64 read GetLong write SetLong;
     property U[Index: Integer]: UInt64 read GetULong write SetULong;
+    property U64[Index: Integer]: UInt64 read GetULong write SetULong;
     property F[Index: Integer]: Double read GetFloat write SetFloat;
     property D[Index: Integer]: TDateTime read GetDateTime write SetDateTime;
     property DUtc[Index: Integer]: TDateTime read GetUtcDateTime write SetUtcDateTime;
@@ -1101,22 +1110,22 @@ type
   TMemoryStreamAccess = class(TMemoryStream);
 
   {$IFDEF SUPPORTS_UTF8STRING}
-  TJsonUTF8StringStream = class(TMemoryStream)
+  TJsonUTF8StringStream = class(TMemoryStream64)
   private
     FDataString: UTF8String;
   protected
-    function Realloc(var NewCapacity: Longint): Pointer; override;
+    function Realloc(var NewCapacity: NativeUInt): Pointer; override;
   public
     constructor Create;
     property DataString: UTF8String read FDataString;
   end;
   {$ENDIF SUPPORTS_UTF8STRING}
 
-  TJsonBytesStream = class(TMemoryStream)
+  TJsonBytesStream = class(TMemoryStream64)
   private
     FBytes: TBytes;
   protected
-    function Realloc(var NewCapacity: Longint): Pointer; override;
+    function Realloc(var NewCapacity: NativeUInt): Pointer; override;
   public
     constructor Create;
     property Bytes: TBytes read FBytes;
@@ -8268,9 +8277,9 @@ begin
   SetPointer(nil, 0);
 end;
 
-function TJsonUTF8StringStream.Realloc(var NewCapacity: Longint): Pointer;
+function TJsonUTF8StringStream.Realloc(var NewCapacity: NativeUInt): Pointer;
 var
-  L: Longint;
+  L: NativeUInt;
 begin
   if NewCapacity <> Capacity then
   begin
@@ -8306,9 +8315,9 @@ begin
   SetPointer(nil, 0);
 end;
 
-function TJsonBytesStream.Realloc(var NewCapacity: Longint): Pointer;
+function TJsonBytesStream.Realloc(var NewCapacity: NativeUInt): Pointer;
 var
-  L: Longint;
+  L: NativeUInt;
 begin
   if NewCapacity <> Capacity then
   begin
@@ -8353,4 +8362,5 @@ initialization
   JSONFormatSettings.DecimalSeparator := '.';
 
 end.
+{$ENDIF FPC}
 

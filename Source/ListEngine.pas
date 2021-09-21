@@ -16,20 +16,6 @@
 { * https://github.com/PassByYou888/InfiniteIoT                                * }
 { * https://github.com/PassByYou888/FastMD5                                    * }
 { ****************************************************************************** }
-
-(*
-  update history
-  2017-11-26
-  "String" define change as "SystemString"
-
-  2017-12-5
-  added support int64 hash object : TInt64HashObjectList
-  added support pointer-NativeUInt hash : TPointerHashNativeUIntList
-
-  2018-4-17
-  added support big StringList with TListString and TListPascalString
-*)
-
 unit ListEngine;
 
 {$INCLUDE zDefine.inc}
@@ -567,7 +553,7 @@ type
 {$ENDREGION 'TPointerHashNativeUIntList'}
 {$REGION 'THashObjectList'}
 
-  THashObjectChangeEvent = procedure(Sender: THashObjectList; Name: SystemString; _OLD, _New: TCoreClassObject) of object;
+  THashObjectChangeEvent = procedure(Sender: THashObjectList; Name: SystemString; OLD_, New_: TCoreClassObject) of object;
 
   THashObjectListData = record
     Obj: TCoreClassObject;
@@ -627,8 +613,8 @@ type
     procedure GetAsList(OutputList: TCoreClassListForObj);
     function GetObjAsName(Obj: TCoreClassObject): SystemString;
     procedure Delete(const Name: SystemString);
-    function Add(const Name: SystemString; _Object: TCoreClassObject): TCoreClassObject;
-    function FastAdd(const Name: SystemString; _Object: TCoreClassObject): TCoreClassObject;
+    function Add(const Name: SystemString; Obj_: TCoreClassObject): TCoreClassObject;
+    function FastAdd(const Name: SystemString; Obj_: TCoreClassObject): TCoreClassObject;
     function Find(const Name: SystemString): TCoreClassObject;
     function Exists(const Name: SystemString): Boolean;
     function ExistsObject(Obj: TCoreClassObject): Boolean;
@@ -650,7 +636,7 @@ type
 {$ENDREGION 'THashObjectList'}
 {$REGION 'THashStringList'}
 
-  THashStringChangeEvent = procedure(Sender: THashStringList; Name: SystemString; _OLD, _New: SystemString) of object;
+  THashStringChangeEvent = procedure(Sender: THashStringList; Name: SystemString; OLD_, New_: SystemString) of object;
 
   THashStringListData = record
     v: SystemString;
@@ -764,7 +750,7 @@ type
     procedure Clear;
 
     class function VToStr(const v: SystemString): SystemString;
-    class function StrToV(const s: SystemString): SystemString;
+    class function StrToV(const S: SystemString): SystemString;
 
     procedure DataImport(TextList: TListPascalString); overload;
     procedure DataImport(TextList: TCoreClassStrings); overload;
@@ -786,7 +772,7 @@ type
   PHashStringList = ^THashStringList;
 {$ENDREGION 'THashStringList'}
 {$REGION 'THashVariantList'}
-  THashVariantChangeEvent = procedure(Sender: THashVariantList; Name: SystemString; _OLD, _New: Variant) of object;
+  THashVariantChangeEvent = procedure(Sender: THashVariantList; Name: SystemString; OLD_, New_: Variant) of object;
 
   THashVariantListData = record
     v: Variant;
@@ -885,8 +871,8 @@ type
 
     property i64[const Name: SystemString]: Int64 read GetI64 write SetI64;
     property i32[const Name: SystemString]: Integer read GetI32 write SetI32;
-    property f[const Name: SystemString]: Double read GetF write SetF;
-    property s[const Name: SystemString]: SystemString read GetS write SetS;
+    property F[const Name: SystemString]: Double read GetF write SetF;
+    property S[const Name: SystemString]: SystemString read GetS write SetS;
 
     property KeyValue[const Name: SystemString]: Variant read GetKeyValue write SetKeyValue; default;
     property NameValue[const Name: SystemString]: Variant read GetKeyValue write SetKeyValue;
@@ -921,7 +907,7 @@ type
     procedure Clear;
 
     class function VToStr(const v: Variant): SystemString;
-    class function StrToV(const s: SystemString): Variant;
+    class function StrToV(const S: SystemString): Variant;
 
     procedure DataImport(TextList: TListPascalString); overload;
     procedure DataImport(TextList: TCoreClassStrings); overload;
@@ -1439,8 +1425,8 @@ type
 
 function HashMod(const h: THash; const m: Integer): Integer; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 // fast hash support
-function MakeHashS(const s: PSystemString): THash; {$IFDEF INLINE_ASM} inline; {$ENDIF}
-function MakeHashPas(const s: PPascalString): THash; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function MakeHashS(const S: PSystemString): THash; {$IFDEF INLINE_ASM} inline; {$ENDIF}
+function MakeHashPas(const S: PPascalString): THash; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 function MakeHashI64(const i64: Int64): THash; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 function MakeHashU32(const c32: Cardinal): THash; {$IFDEF INLINE_ASM} inline; {$ENDIF}
 function MakeHashP(const p: Pointer): THash; {$IFDEF INLINE_ASM} inline; {$ENDIF}
@@ -1464,15 +1450,15 @@ begin
       Result := 0;
 end;
 
-function MakeHashS(const s: PSystemString): THash;
+function MakeHashS(const S: PSystemString): THash;
 begin
-  Result := FastHashPSystemString(s);
+  Result := FastHashPSystemString(S);
   Result := umlCRC32(@Result, SizeOf(THash));
 end;
 
-function MakeHashPas(const s: PPascalString): THash;
+function MakeHashPas(const S: PPascalString): THash;
 begin
-  Result := FastHashPPascalString(s);
+  Result := FastHashPPascalString(S);
   Result := umlCRC32(@Result, SizeOf(THash));
 end;
 
@@ -6227,7 +6213,7 @@ begin
   FHashList.Delete(Name);
 end;
 
-function THashObjectList.Add(const Name: SystemString; _Object: TCoreClassObject): TCoreClassObject;
+function THashObjectList.Add(const Name: SystemString; Obj_: TCoreClassObject): TCoreClassObject;
 var
   pObjData: PHashObjectListData;
 begin
@@ -6236,7 +6222,7 @@ begin
     begin
       try
         if Assigned(pObjData^.OnChnage) then
-            pObjData^.OnChnage(Self, Name, pObjData^.Obj, _Object);
+            pObjData^.OnChnage(Self, Name, pObjData^.Obj, Obj_);
       except
       end;
 
@@ -6256,11 +6242,11 @@ begin
       FHashList.Add(Name, pObjData, False);
     end;
 
-  pObjData^.Obj := _Object;
-  Result := _Object;
+  pObjData^.Obj := Obj_;
+  Result := Obj_;
 end;
 
-function THashObjectList.FastAdd(const Name: SystemString; _Object: TCoreClassObject): TCoreClassObject;
+function THashObjectList.FastAdd(const Name: SystemString; Obj_: TCoreClassObject): TCoreClassObject;
 var
   pObjData: PHashObjectListData;
 begin
@@ -6268,8 +6254,8 @@ begin
   pObjData^.OnChnage := nil;
   FHashList.Add(Name, pObjData, False);
 
-  pObjData^.Obj := _Object;
-  Result := _Object;
+  pObjData^.Obj := Obj_;
+  Result := Obj_;
 end;
 
 function THashObjectList.Find(const Name: SystemString): TCoreClassObject;
@@ -6884,20 +6870,20 @@ begin
 
   i := 1;
 
-  while i <= sour.Len do
+  while i <= sour.L do
     begin
       if sour.ComparePos(i, h) then
         begin
           bPos := i;
-          ePos := sour.GetPos(t, i + h.Len);
+          ePos := sour.GetPos(t, i + h.L);
           if ePos > 0 then
             begin
-              KeyText := sour.Copy(bPos + h.Len, ePos - (bPos + h.Len)).Text;
+              KeyText := sour.Copy(bPos + h.L, ePos - (bPos + h.L)).Text;
 
               if Exists(KeyText) then
                 begin
                   Output_ := Output_ + GetKeyValue(KeyText);
-                  i := ePos + t.Len;
+                  i := ePos + t.L;
                   Continue;
                 end
               else
@@ -7046,12 +7032,12 @@ begin
       Result := v;
 end;
 
-class function THashStringTextStream.StrToV(const s: SystemString): SystemString;
+class function THashStringTextStream.StrToV(const S: SystemString): SystemString;
 var
   n, body: U_String;
   v: Variant;
 begin
-  n := umlTrimSpace(s);
+  n := umlTrimSpace(S);
   try
     if n.ComparePos(1, '___base64:') then
       begin
@@ -7110,7 +7096,7 @@ begin
         if ((n.Exists(':')) or (n.Exists('='))) and (not CharIn(n.First, [':', '='])) then
           begin
             TextName := umlGetFirstStr_Discontinuity(n, ':=');
-            if TextName.Len > 0 then
+            if TextName.L > 0 then
               begin
                 TextValue := umlDeleteFirstStr_Discontinuity(n, ':=');
                 FStringList[TextName.Text] := StrToV(TextValue.Text);
@@ -7939,20 +7925,20 @@ begin
 
   i := 1;
 
-  while i <= sour.Len do
+  while i <= sour.L do
     begin
       if sour.ComparePos(i, h) then
         begin
           bPos := i;
-          ePos := sour.GetPos(t, i + h.Len);
+          ePos := sour.GetPos(t, i + h.L);
           if ePos > 0 then
             begin
-              KeyText := sour.Copy(bPos + h.Len, ePos - (bPos + h.Len)).Text;
+              KeyText := sour.Copy(bPos + h.L, ePos - (bPos + h.L)).Text;
 
               if Exists(KeyText) then
                 begin
                   Output_ := Output_ + VarToStr(GetKeyValue(KeyText));
-                  i := ePos + t.Len;
+                  i := ePos + t.L;
                   Continue;
                 end
               else
@@ -8142,12 +8128,12 @@ begin
   end;
 end;
 
-class function THashVariantTextStream.StrToV(const s: SystemString): Variant;
+class function THashVariantTextStream.StrToV(const S: SystemString): Variant;
 var
   n, body: U_String;
   v: Variant;
 begin
-  n := umlTrimSpace(s);
+  n := umlTrimSpace(S);
   try
     if n.ComparePos(1, '___base64:') then
       begin
@@ -8224,7 +8210,7 @@ begin
         if ((n.Exists(':')) or (n.Exists('='))) and (not CharIn(n.First, [':', '='])) then
           begin
             TextName := umlGetFirstStr_Discontinuity(n, ':=');
-            if TextName.Len > 0 then
+            if TextName.L > 0 then
               begin
                 TextValue := umlDeleteFirstStr_Discontinuity(n, ':=');
                 FVariantList[TextName.Text] := StrToV(TextValue.Text);

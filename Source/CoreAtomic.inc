@@ -65,26 +65,23 @@ end;
 constructor TCritical.Create;
 begin
   inherited Create;
-  LNum := TAtomInt.Create(0);
+  LNum := 0;
 end;
 
 destructor TCritical.Destroy;
 begin
-  LNum.Free;
   inherited Destroy;
 end;
 
 procedure TCritical.Acquire;
 begin
-  Inc(LNum.LockP^);
-  LNum.UnLock;
   inherited Acquire;
+  Inc(LNum);
 end;
 
 procedure TCritical.Release;
 begin
-  Dec(LNum.LockP^);
-  LNum.UnLock;
+  Dec(LNum);
   inherited Release;
 end;
 
@@ -110,7 +107,119 @@ end;
 
 function TCritical.IsBusy: Boolean;
 begin
-  Result := LNum.V > 0;
+  Result := LNum > 0;
+end;
+
+procedure TCritical.Inc_(var x: Int64);
+begin
+  Lock;
+  Inc(x);
+  UnLock;
+end;
+
+procedure TCritical.Inc_(var x: Int64; const v: Int64);
+begin
+  Lock;
+  Inc(x, v);
+  UnLock;
+end;
+
+procedure TCritical.Dec_(var x: Int64);
+begin
+  Lock;
+  Dec(x);
+  UnLock;
+end;
+
+procedure TCritical.Dec_(var x: Int64; const v: Int64);
+begin
+  Lock;
+  Dec(x, v);
+  UnLock;
+end;
+
+procedure TCritical.Inc_(var x: UInt64);
+begin
+  Lock;
+  Inc(x);
+  UnLock;
+end;
+
+procedure TCritical.Inc_(var x: UInt64; const v: UInt64);
+begin
+  Lock;
+  Inc(x, v);
+  UnLock;
+end;
+
+procedure TCritical.Dec_(var x: UInt64);
+begin
+  Lock;
+  Dec(x);
+  UnLock;
+end;
+
+procedure TCritical.Dec_(var x: UInt64; const v: UInt64);
+begin
+  Lock;
+  Dec(x, v);
+  UnLock;
+end;
+
+procedure TCritical.Inc_(var x: Integer);
+begin
+  Lock;
+  Inc(x);
+  UnLock;
+end;
+
+procedure TCritical.Inc_(var x: Integer; const v: Integer);
+begin
+  Lock;
+  Inc(x, v);
+  UnLock;
+end;
+
+procedure TCritical.Dec_(var x: Integer);
+begin
+  Lock;
+  Dec(x);
+  UnLock;
+end;
+
+procedure TCritical.Dec_(var x: Integer; const v: Integer);
+begin
+  Lock;
+  Dec(x, v);
+  UnLock;
+end;
+
+procedure TCritical.Inc_(var x: Cardinal);
+begin
+  Lock;
+  Inc(x);
+  UnLock;
+end;
+
+procedure TCritical.Inc_(var x: Cardinal; const v: Cardinal);
+begin
+  Lock;
+  Inc(x, v);
+  UnLock;
+end;
+
+procedure TCritical.Dec_(var x: Cardinal);
+begin
+  Lock;
+  Dec(x);
+  UnLock;
+end;
+
+procedure TCritical.Dec_(var x: Cardinal; const v: Cardinal);
+begin
+  Lock;
+  Dec(x, v);
+  UnLock;
 end;
 
 type
@@ -284,14 +393,14 @@ begin
 {$ENDIF FPC}
 end;
 
-procedure AtomInc(var x: Int64; const V: Int64);
+procedure AtomInc(var x: Int64; const v: Int64);
 begin
 {$IFDEF FPC}
   CoreComputeCritical.Acquire;
-  Inc(x, V);
+  Inc(x, v);
   CoreComputeCritical.Release;
 {$ELSE FPC}
-  System.AtomicIncrement(x, V);
+  System.AtomicIncrement(x, v);
 {$ENDIF FPC}
 end;
 
@@ -306,14 +415,14 @@ begin
 {$ENDIF FPC}
 end;
 
-procedure AtomDec(var x: Int64; const V: Int64);
+procedure AtomDec(var x: Int64; const v: Int64);
 begin
 {$IFDEF FPC}
   CoreComputeCritical.Acquire;
-  Dec(x, V);
+  Dec(x, v);
   CoreComputeCritical.Release;
 {$ELSE FPC}
-  System.AtomicDecrement(x, V);
+  System.AtomicDecrement(x, v);
 {$ENDIF FPC}
 end;
 
@@ -328,14 +437,14 @@ begin
 {$ENDIF FPC}
 end;
 
-procedure AtomInc(var x: UInt64; const V: UInt64);
+procedure AtomInc(var x: UInt64; const v: UInt64);
 begin
 {$IFDEF FPC}
   CoreComputeCritical.Acquire;
-  Inc(x, V);
+  Inc(x, v);
   CoreComputeCritical.Release;
 {$ELSE FPC}
-  System.AtomicIncrement(x, V);
+  System.AtomicIncrement(x, v);
 {$ENDIF FPC}
 end;
 
@@ -350,14 +459,14 @@ begin
 {$ENDIF FPC}
 end;
 
-procedure AtomDec(var x: UInt64; const V: UInt64);
+procedure AtomDec(var x: UInt64; const v: UInt64);
 begin
 {$IFDEF FPC}
   CoreComputeCritical.Acquire;
-  Dec(x, V);
+  Dec(x, v);
   CoreComputeCritical.Release;
 {$ELSE FPC}
-  System.AtomicDecrement(x, V);
+  System.AtomicDecrement(x, v);
 {$ENDIF FPC}
 end;
 
@@ -372,14 +481,14 @@ begin
 {$ENDIF FPC}
 end;
 
-procedure AtomInc(var x: Integer; const V: Integer);
+procedure AtomInc(var x: Integer; const v: Integer);
 begin
 {$IFDEF FPC}
   CoreComputeCritical.Acquire;
-  Inc(x, V);
+  Inc(x, v);
   CoreComputeCritical.Release;
 {$ELSE FPC}
-  System.AtomicIncrement(x, V);
+  System.AtomicIncrement(x, v);
 {$ENDIF FPC}
 end;
 
@@ -394,14 +503,14 @@ begin
 {$ENDIF FPC}
 end;
 
-procedure AtomDec(var x: Integer; const V: Integer);
+procedure AtomDec(var x: Integer; const v: Integer);
 begin
 {$IFDEF FPC}
   CoreComputeCritical.Acquire;
-  Dec(x, V);
+  Dec(x, v);
   CoreComputeCritical.Release;
 {$ELSE FPC}
-  System.AtomicDecrement(x, V);
+  System.AtomicDecrement(x, v);
 {$ENDIF FPC}
 end;
 
@@ -416,14 +525,14 @@ begin
 {$ENDIF FPC}
 end;
 
-procedure AtomInc(var x: Cardinal; const V: Cardinal);
+procedure AtomInc(var x: Cardinal; const v: Cardinal);
 begin
 {$IFDEF FPC}
   CoreComputeCritical.Acquire;
-  Inc(x, V);
+  Inc(x, v);
   CoreComputeCritical.Release;
 {$ELSE FPC}
-  System.AtomicIncrement(x, V);
+  System.AtomicIncrement(x, v);
 {$ENDIF FPC}
 end;
 
@@ -438,13 +547,13 @@ begin
 {$ENDIF FPC}
 end;
 
-procedure AtomDec(var x: Cardinal; const V: Cardinal);
+procedure AtomDec(var x: Cardinal; const v: Cardinal);
 begin
 {$IFDEF FPC}
   CoreComputeCritical.Acquire;
-  Dec(x, V);
+  Dec(x, v);
   CoreComputeCritical.Release;
 {$ELSE FPC}
-  System.AtomicDecrement(x, V);
+  System.AtomicDecrement(x, v);
 {$ENDIF FPC}
 end;
